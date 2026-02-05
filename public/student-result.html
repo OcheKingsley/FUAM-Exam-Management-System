@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Results</title>
+
+<style>
+  :root {
+    --primary: #2563eb;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 20px;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .header h2 {
+    margin: 0;
+  }
+
+  .cgpa-box {
+    background: var(--primary);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+
+  /* ===== CARD ===== */
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    padding: 20px;
+  }
+
+  /* ===== TABLE ===== */
+  .table-wrapper {
+    overflow-x: auto;
+    margin-top: 10px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 650px;
+  }
+
+  th, td {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    background: #f1f5f9;
+    font-weight: 600;
+  }
+
+  tbody tr:hover {
+    background: #f9fafb;
+  }
+
+  /* ===== BUTTON ===== */
+  .actions {
+    margin-top: 25px;
+    text-align: center;
+  }
+
+  button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    font-size: 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+
+  button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    opacity: 0.95;
+  }
+
+  /* ===== MOBILE ===== */
+  @media (max-width: 600px) {
+    .header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .cgpa-box {
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="header">
+    <h2>📊 My Exam Results</h2>
+    <div class="cgpa-box">
+      Total CGPA: <span id="cgpa">0.00</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Course Code</th>
+            <th>Course Title</th>
+            <th>Score</th>
+            <th>Total</th>
+            <th>Percentage</th>
+            <th>Weighted</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+
+    <div class="actions">
+      <button id="downloadPdfBtn" disabled>
+        📄 Download Result as PDF
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+const token = localStorage.getItem("token");
+const btn = document.getElementById("downloadPdfBtn");
+let studentInfo = {};
+
+if (!token) {
+  alert("Session expired. Please login again.");
+}
+
+/* ===== FETCH RESULTS ===== */
+fetch("/api/student/results", {
+  headers: { Authorization: "Bearer " + token }
+})
+.then(res => res.json())
+.then(data => {
+  document.getElementById("cgpa").innerText =
+    Number(data.totalCGPA || 0).toFixed(2);
+
+  const tbody = document.getElementById("resultsBody");
+  tbody.innerHTML = "";
+
+  if (!data.results || data.results.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">No results available</td>
+      </tr>
+    `;
+    btn.disabled = true;
+    return;
+  }
+
+  data.results.forEach(r => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${r.courseCode}</td>
+        <td>${r.courseTitle}</td>
+        <td>${r.score}</td>
+        <td>${r.total_questions}</td>
+        <td>${Number(r.percentage).toFixed(2)}%</td>
+        <td>${Number(r.weighted_score).toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  btn.disabled = false;
+})
+.catch(() => {
+  alert("Failed to load results");
+});
+
+/* ===== FETCH PROFILE ===== */
+fetch("/api/me", {
+  headers: { Authorization: "Bearer " + token }
+})
+.then(res => res.json())
+.then(data => studentInfo = data);
+
+/* ===== PDF DOWNLOAD (FIXED) ===== */
+btn.addEventListener("click", () => {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+
+  pdf.setFontSize(18);
+  pdf.text("STUDENT EXAM RESULT", 14, 20);
+
+  pdf.setFontSize(11);
+  pdf.text(`Name: ${studentInfo.fullName || "N/A"}`, 14, 32);
+  pdf.text(`Student ID: ${studentInfo.roleSpecificField || "N/A"}`, 14, 40);
+  pdf.text(`Department: ${studentInfo.department || "N/A"}`, 14, 48);
+  pdf.text(`Level: ${studentInfo.level || "N/A"}`, 14, 56);
+
+  pdf.text(`Total CGPA: ${document.getElementById("cgpa").innerText}`, 150, 32);
+
+  let y = 70;
+
+  pdf.setFontSize(12);
+  ["Code","Title","Score","Total","%","Weighted"]
+    .forEach((h,i)=>pdf.text(h,[14,45,110,125,145,160][i],y));
+
+  y += 8;
+
+  document.querySelectorAll("#resultsBody tr").forEach(row => {
+    const c = row.querySelectorAll("td");
+
+    /* ✅ FIX: skip rows without full columns */
+    if (c.length < 6) return;
+
+    pdf.text(c[0].innerText, 14, y);
+    pdf.text(c[1].innerText.substring(0, 28), 45, y);
+    pdf.text(c[2].innerText, 110, y);
+    pdf.text(c[3].innerText, 125, y);
+    pdf.text(c[4].innerText, 145, y);
+    pdf.text(c[5].innerText, 160, y);
+
+    y += 8;
+    if (y > 280) {
+      pdf.addPage();
+      y = 20;
+    }
+  });
+
+  pdf.setFontSize(10);
+  pdf.text(`Generated on ${new Date().toLocaleDateString()}`, 14, 290);
+
+  pdf.save(`${studentInfo.roleSpecificField || "student"}_Exam_Result.pdf`);
+});
+</script>
+
+</body>
+</html>

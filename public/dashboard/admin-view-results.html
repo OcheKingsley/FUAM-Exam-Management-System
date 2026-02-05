@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Student Results</title>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1e40af;
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    h2 {
+      margin-bottom: 16px;
+      font-size: 1.6rem;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    }
+
+    /* SEARCH BAR */
+    .search-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .search-bar input {
+      flex: 1;
+      min-width: 200px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+
+    .search-bar button {
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      background: var(--primary);
+      color: white;
+      transition: background 0.2s ease;
+    }
+
+    .search-bar button.secondary {
+      background: #e5e7eb;
+      color: var(--text);
+    }
+
+    .search-bar button:hover {
+      background: var(--primary-dark);
+    }
+
+    .search-bar button.secondary:hover {
+      background: #d1d5db;
+    }
+
+    /* TABLE */
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 800px;
+    }
+
+    thead {
+      background: var(--primary);
+      color: white;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr:hover {
+      background: #f1f5ff;
+    }
+
+    td {
+      color: var(--text);
+    }
+
+    /* EMPTY STATE */
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 20px;
+    }
+
+    /* MOBILE TWEAKS */
+    @media (max-width: 768px) {
+      h2 {
+        font-size: 1.3rem;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      .search-bar {
+        flex-direction: column;
+      }
+
+      .search-bar button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h2>📊 Student Exam Results</h2>
+
+    <div class="card">
+      <div class="search-bar">
+        <input
+          type="text"
+          id="studentIdInput"
+          placeholder="Enter Student ID (e.g. UABS0001)"
+        />
+        <button onclick="searchResults()">Search</button>
+        <button class="secondary" onclick="loadAll()">Show All</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Student ID</th>
+              <th>Course Code</th>
+              <th>Course Title</th>
+              <th>Score</th>
+              <th>Total</th>
+              <th>Percentage</th>
+              <th>Weighted Score</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody">
+            <tr>
+              <td colspan="7" class="empty">Loading results...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const body = document.getElementById('resultsBody');
+
+    function loadAll() {
+      fetch('/api/admin/results', {
+        headers: { Authorization: 'Bearer ' + token }
+      })
+      .then(res => res.json())
+      .then(data => render(data));
+    }
+
+    function searchResults() {
+      const studentId = document.getElementById('studentIdInput').value.trim();
+      if (!studentId) {
+        alert("Enter a Student ID");
+        return;
+      }
+
+      fetch(`/api/admin/results/search?studentId=${studentId}`, {
+        headers: { Authorization: 'Bearer ' + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.length === 0) {
+          body.innerHTML = `
+            <tr>
+              <td colspan="7" class="empty">No results found</td>
+            </tr>`;
+        } else {
+          render(data);
+        }
+      });
+    }
+
+    function render(data) {
+      body.innerHTML = "";
+      data.forEach(r => {
+        body.innerHTML += `
+          <tr>
+            <td>${r.student_id}</td>
+            <td>${r.courseCode}</td>
+            <td>${r.courseTitle}</td>
+            <td>${r.score}</td>
+            <td>${r.total_questions}</td>
+            <td>${r.percentage}%</td>
+            <td>${r.weighted_score}</td>
+          </tr>
+        `;
+      });
+    }
+
+    loadAll();
+  </script>
+
+</body>
+</html>

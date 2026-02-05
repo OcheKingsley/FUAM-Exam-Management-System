@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Student Dashboard</title>
+  <link rel="stylesheet" href="/dashboard/dashboard.css" />
+</head>
+<body>
+
+  <header class="navbar">
+    <h2>Online Exam System</h2>
+    <nav>
+      <a href="/home">Home</a>
+      <a href="/student-results"> Results</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </nav>
+  </header>
+
+  <main class="container">
+
+    <!-- Welcome Card -->
+    <section class="card">
+      <h3>Welcome 👋</h3>
+      <h3>My Profile</h3>
+  <p><strong>Name:</strong> <span id="name"></span></p>
+  <p><strong>Email:</strong> <span id="email"></span></p>
+  <p><strong>User ID:</strong> <span id="code"></span></p>
+  <p><strong>Role:</strong> <span id="role"></span></p>
+  <p><strong>Joined:</strong> <span id="date"></span></p>
+    </section>
+
+    <!-- Take Exam -->
+    <section class="card">
+      <h3>Available Exams</h3>
+      <p>Select an exam to begin</p>
+      <ul id="examList"></ul>
+    </section>
+
+    <!-- Results -->
+    <section class="card">
+      <h3>My Results</h3>
+      <p>View your exam scores</p>
+      <a href="/student-results" class="btn">View Results</a>
+    </section>
+
+  </main>
+<script>
+  // Ensure only students access this page
+  const role = localStorage.getItem("role");
+  if (role !== "student") {
+    alert("Access denied");
+    window.location.href = "/";
+  }
+
+  // Fetch logged-in student info from backend
+  fetch('/api/me', {
+    headers: {
+      Authorization: 'Bearer ' + localStorage.getItem('token')
+    }
+  })
+  .then(res => {
+    if (!res.ok) throw new Error("Unauthorized");
+    return res.json();
+  })
+  .then(user => {
+    // Fill in profile fields
+    document.getElementById('name').innerText = user.fullName;
+    document.getElementById('email').innerText = user.email;
+    document.getElementById('code').innerText = user.roleSpecificField;
+    document.getElementById('role').innerText = user.role;
+    document.getElementById('date').innerText =
+      new Date(user.created_at).toLocaleDateString();
+  })
+  .catch(err => {
+    console.error(err);
+    alert("Session expired. Please login again.");
+    localStorage.clear();
+    window.location.href = '/';
+  });
+
+  // Fetch exams
+  fetch('/api/student/exams', {
+  headers: {
+    Authorization: 'Bearer ' + localStorage.getItem('token')
+  }
+})
+
+    .then(res => res.json())
+    .then(data => {
+      const list = document.getElementById('examList');
+      list.innerHTML = '';
+
+      data.forEach(exam => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <strong>${exam.courseTitle}</strong><br>
+          <small>${exam.courseCode}</small><br>
+          <a href="/quiz/${exam.id}" class="btn">Take Exam</a>
+        `;
+        list.appendChild(li);
+      });
+    })
+    .catch(err => console.error("Error fetching exams:", err));
+
+  // Logout function
+  function logout() {
+    localStorage.clear();
+    window.location.href = '/';
+  }
+</script>
+
+
+</body>
+</html>

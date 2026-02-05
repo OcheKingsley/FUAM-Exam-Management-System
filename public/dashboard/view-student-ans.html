@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Student Answers</title>
+<style>
+:root {
+  --primary: #2563eb; --primary-dark: #1e40af;
+  --bg: #f5f7fb; --card: #ffffff; --text: #1f2937;
+  --muted: #6b7280; --border: #e5e7eb;
+}
+* { box-sizing:border-box; font-family:"Segoe UI", Tahoma, sans-serif; }
+body { margin:0; padding:20px; background:var(--bg); color:var(--text); }
+.container { max-width:1200px; margin:auto; }
+h2 { margin-bottom:16px; font-size:1.6rem; }
+.card { background:var(--card); border-radius:10px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.05); margin-bottom:20px; }
+.search-bar { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
+.search-bar input { flex:1; min-width:200px; padding:10px; border-radius:8px; border:1px solid var(--border); }
+.search-bar button { padding:10px 16px; border:none; border-radius:8px; cursor:pointer; background:var(--primary); color:white; transition:0.2s; }
+.search-bar button.secondary { background:#e5e7eb; color:var(--text); }
+.search-bar button:hover { background:var(--primary-dark); }
+.search-bar button.secondary:hover { background:#d1d5db; }
+.table-wrapper { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; min-width:800px; }
+thead { background:var(--primary); color:white; }
+th, td { padding:12px 14px; text-align:left; border-bottom:1px solid var(--border); font-size:0.9rem; }
+tbody tr:hover { background:#f1f5ff; }
+td { color:var(--text); }
+.empty { text-align:center; color:var(--muted); padding:20px; }
+@media (max-width:768px){ .search-bar { flex-direction:column; } .search-bar button { width:100%; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>📝 Student Answers</h2>
+  <div class="card">
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search by Student ID or Course Title">
+      <button onclick="searchAnswers()">Search</button>
+      <button class="secondary" onclick="loadAllAnswers()">Show All</button>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>Course Code</th>
+            <th>Course Title</th>
+            <th>Question ID</th>
+            <th>Selected Answer</th>
+          </tr>
+        </thead>
+        <tbody id="answersBody">
+          <tr><td colspan="5" class="empty">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+let answersData = [];
+
+// Fetch all student answers
+function loadAllAnswers() {
+  fetch('/api/student-answers', { headers:{ Authorization: 'Bearer ' + token } })
+    .then(res => res.json())
+    .then(data => {
+      // Handle null data gracefully
+      answersData = data.map(a => ({
+        student_id: a.student_id || 'N/A',
+        courseCode: a.courseCode || 'N/A',
+        courseTitle: a.courseTitle || 'N/A',
+        question_id: a.question_id || 'N/A',
+        selected_answer: a.selected_answer ?? 'Not answered'
+      }));
+      renderAnswers(answersData);
+    })
+    .catch(err => {
+      console.error(err);
+      document.getElementById('answersBody').innerHTML = `<tr><td colspan="5" class="empty">Failed to load data</td></tr>`;
+    });
+}
+
+// Search function
+function searchAnswers() {
+  const val = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = answersData.filter(a => 
+    a.student_id.toLowerCase().includes(val) || 
+    a.courseTitle.toLowerCase().includes(val)
+  );
+  renderAnswers(filtered);
+}
+
+// Render table
+function renderAnswers(data){
+  const body = document.getElementById('answersBody');
+  if(data.length === 0){
+    body.innerHTML = `<tr><td colspan="5" class="empty">No answers found</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = data.map(a => `<tr>
+    <td>${a.student_id}</td>
+    <td>${a.courseCode}</td>
+    <td>${a.courseTitle}</td>
+    <td>${a.question_id}</td>
+    <td>${a.selected_answer}</td>
+  </tr>`).join('');
+}
+
+// Initial load
+loadAllAnswers();
+</script>
+</body>
+</html>

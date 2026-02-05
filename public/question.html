@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Management Panel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="admin-panel">
+    <h2 class="head">Question Management Panel</h2>
+    <form id="questionForm">
+        <label for="exam">Select Exam:</label>
+        <select id="exam" name="exam">
+            <!-- Options will be populated dynamically -->
+        </select>
+
+        <label for="question">Question:</label>
+        <textarea id="question" name="question" required></textarea>
+        <div class="option-group">
+          <input type="radio" id="optionA" name="correctAnswer" value="A">
+          <label for="optionA">Option A:</label>
+          <textarea id="optionAText" name="optionA"></textarea>
+      </div>
+      <div class="option-group">
+          <input type="radio" id="optionB" name="correctAnswer" value="B">
+          <label for="optionB">Option B:</label>
+          <textarea id="optionBText" name="optionB"></textarea>
+      </div>
+      <div class="option-group">
+          <input type="radio" id="optionC" name="correctAnswer" value="C">
+          <label for="optionC">Option C:</label>
+          <textarea id="optionCText" name="optionC"></textarea>
+      </div>
+      <div class="option-group">
+          <input type="radio" id="optionD" name="correctAnswer" value="D">
+          <label for="optionD">Option D:</label>
+          <textarea id="optionDText" name="optionD"></textarea>
+      </div>
+      
+        <button type="button" onclick="addQuestion()">Add Question</button>
+    </form>
+
+    <hr>
+
+    <div id="questionList">
+        Existing questions will be dynamically added here
+    </div>
+
+    <button type="button" id="submitAllQuestions">Submit All Questions</button>
+
+</div>
+<script src="questionS.js"></script>
+</body>
+</html>

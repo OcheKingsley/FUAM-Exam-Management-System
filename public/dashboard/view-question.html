@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Questions</title>
+<style>
+:root {
+  --primary: #2563eb; --primary-dark: #1e40af;
+  --bg: #f5f7fb; --card: #ffffff; --text: #1f2937;
+  --muted: #6b7280; --border: #e5e7eb;
+}
+* { box-sizing:border-box; font-family:"Segoe UI", Tahoma, sans-serif; }
+body { margin:0; padding:20px; background:var(--bg); color:var(--text); }
+.container { max-width:1200px; margin:auto; }
+h2 { margin-bottom:16px; font-size:1.6rem; }
+.card { background:var(--card); border-radius:10px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.05); margin-bottom:20px; }
+.search-bar { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
+.search-bar input { flex:1; min-width:200px; padding:10px; border-radius:8px; border:1px solid var(--border); }
+.search-bar button { padding:10px 16px; border:none; border-radius:8px; cursor:pointer; background:var(--primary); color:white; transition:0.2s; }
+.search-bar button.secondary { background:#e5e7eb; color:var(--text); }
+.search-bar button:hover { background:var(--primary-dark); }
+.search-bar button.secondary:hover { background:#d1d5db; }
+.table-wrapper { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; min-width:900px; }
+thead { background:var(--primary); color:white; }
+th, td { padding:12px 14px; text-align:left; border-bottom:1px solid var(--border); font-size:0.9rem; }
+tbody tr:hover { background:#f1f5ff; }
+td { color:var(--text); }
+.empty { text-align:center; color:var(--muted); padding:20px; }
+@media (max-width:768px){
+  .search-bar { flex-direction:column; }
+  .search-bar button { width:100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>📝 Questions</h2>
+
+  <div class="card">
+    <div class="search-bar">
+      <input type="text" id="questionSearchInput" placeholder="Search by Exam ID, Question, or Option">
+      <button onclick="searchQuestions()">Search</button>
+      <button class="secondary" onclick="loadAllQuestions()">Show All</button>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Exam ID</th>
+            <th>Question</th>
+            <th>Option A</th>
+            <th>Option B</th>
+            <th>Option C</th>
+            <th>Option D</th>
+            <th>Correct Answer</th>
+          </tr>
+        </thead>
+        <tbody id="questionsBody">
+          <tr><td colspan="8" class="empty">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+let questionsData = [];
+
+// Fetch all questions
+function loadAllQuestions() {
+  fetch('/api/questions', {
+    headers: { Authorization: 'Bearer ' + token }
+  })
+    .then(res => res.json())
+    .then(data => {
+      questionsData = data;
+      renderQuestions(data);
+    })
+    .catch(err => {
+      console.error('Error fetching questions:', err);
+      document.getElementById('questionsBody').innerHTML =
+        `<tr><td colspan="8" class="empty">Failed to load questions</td></tr>`;
+    });
+}
+
+function searchQuestions() {
+  const val = document.getElementById('questionSearchInput').value.trim().toLowerCase();
+
+  let filtered = questionsData.filter(q => {
+    return (
+      (q.id ?? '').toString().toLowerCase().includes(val) ||
+      (q.exam_id ?? '').toString().toLowerCase().includes(val) ||
+      (q.question ?? '').toLowerCase().includes(val) ||
+      (q.optionA ?? '').toLowerCase().includes(val) ||
+      (q.optionB ?? '').toLowerCase().includes(val) ||
+      (q.optionC ?? '').toLowerCase().includes(val) ||
+      (q.optionD ?? '').toLowerCase().includes(val)
+    );
+  });
+
+  if (!isNaN(val) && val !== '') {
+    filtered = questionsData.filter(q => q.exam_id == Number(val));
+  }
+
+  renderQuestions(filtered);
+}
+
+function renderQuestions(data) {
+  const body = document.getElementById('questionsBody');
+
+  if (data.length === 0) {
+    body.innerHTML = `<tr><td colspan="8" class="empty">No questions found</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = data.map(q => `
+    <tr>
+      <td>${q.id}</td>
+      <td>${q.exam_id}</td>
+      <td>${q.question}</td>
+      <td>${q.optionA}</td>
+      <td>${q.optionB}</td>
+      <td>${q.optionC}</td>
+      <td>${q.optionD}</td>
+      <td>${q.correctAnswer}</td>
+    </tr>
+  `).join('');
+}
+
+loadAllQuestions();
+</script>
+
+</body>
+</html>

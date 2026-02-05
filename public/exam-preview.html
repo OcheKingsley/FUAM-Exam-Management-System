@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Exam Preview</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    .question { margin-bottom: 20px; }
+    .readonly { color: gray; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<h2 id="examTitle"></h2>
+<p class="readonly">Preview mode — submission disabled</p>
+
+<div id="questions"></div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const examId = params.get("examId");
+
+fetch(`/api/exam/${examId}/preview`, {
+  headers: {
+    Authorization: 'Bearer ' + localStorage.getItem('token')
+  }
+})
+.then(res => {
+  if (!res.ok) throw new Error("Unauthorized");
+  return res.json();
+})
+.then(data => {
+  document.getElementById("examTitle").innerText =
+    `${data.exam.courseTitle} (${data.exam.courseCode})`;
+
+  const container = document.getElementById("questions");
+
+  data.questions.forEach((q, index) => {
+    const div = document.createElement("div");
+    div.className = "question";
+    div.innerHTML = `
+      <strong>Q${index + 1}. ${q.question}</strong><br>
+      A. ${q.optionA}<br>
+      B. ${q.optionB}<br>
+      C. ${q.optionC}<br>
+      D. ${q.optionD}
+    `;
+    container.appendChild(div);
+  });
+})
+.catch(err => {
+  alert("Access denied or session expired");
+  window.location.href = "/";
+});
+</script>
+
+</body>
+</html>

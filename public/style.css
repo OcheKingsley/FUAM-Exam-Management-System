@@ -1,0 +1,152 @@
+/* ===== RESET ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ===== BASE ===== */
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+  background-color: #f1f5f9;
+  padding: 16px;
+  color: #1f2937;
+}
+
+/* ===== ADMIN PANEL ===== */
+.admin-panel {
+  max-width: 900px;
+  margin: 0 auto;
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== HEADINGS ===== */
+h2 {
+  margin-bottom: 20px;
+  font-size: clamp(20px, 3vw, 26px);
+  color: #111827;
+  text-align: center;
+}
+
+/* ===== FORM ===== */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #374151;
+}
+
+/* ===== INPUTS ===== */
+select,
+textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  background: #ffffff;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+/* ===== OPTIONS ===== */
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.option-group label {
+  font-weight: 500;
+}
+
+.option-group input[type="radio"] {
+  margin-right: 8px;
+  accent-color: #2563eb;
+}
+
+/* ===== BUTTONS ===== */
+button {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+button:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+/* Submit All button */
+#submitAllQuestions {
+  width: 100%;
+  margin-top: 20px;
+  font-size: 16px;
+}
+
+/* ===== HR ===== */
+hr {
+  border: none;
+  height: 1px;
+  background: #e5e7eb;
+  margin: 24px 0;
+}
+
+/* ===== QUESTION LIST ===== */
+#questionList {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #374151;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 600px) {
+  body {
+    padding: 12px;
+  }
+
+  .admin-panel {
+    padding: 18px;
+  }
+
+  textarea {
+    min-height: 80px;
+  }
+}
+
+/* ===== TABLET ===== */
+@media (min-width: 601px) and (max-width: 900px) {
+  .admin-panel {
+    padding: 22px;
+  }
+}

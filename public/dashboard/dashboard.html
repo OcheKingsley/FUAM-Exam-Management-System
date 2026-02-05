@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+
+<header class="navbar">
+  <h2>Online Exam System</h2>
+
+  <button class="menu-toggle" id="menuToggle">☰</button>
+
+  <nav>
+    <ul class="nav-list" id="navList">
+      <li><a href="/home">Home</a></li>
+      <li><a href="/assignExam">Assign Exam</a></li>
+      <li><a href="/submitQuestion">Add Questions</a></li>
+      <li><a href="/register">Register User</a></li>
+      <li><a href="/update-user">Update User</a></li>
+      <li><a href="/student-result" id="resultLink">Student Result</a></li>
+
+      <li class="dropdown" id="dropdownC">
+        <a href="#" class="dropdown-toggle">Dashboard ▾</a>
+        <ul class="dropdown-menu">
+          <li><a href="/admin-results">View Results</a></li>
+          <li><a href="/view-user">View Registered Users </a></li>
+          <li><a href="/view-exam">View Assigned Exam</a></li>
+          <li><a href="/view-questions">View Questions</a></li>
+          <li><a href="/view-student">View Student Answer</a></li>
+        </ul>
+      </li>
+
+      <li><a href="#" onclick="logout()">Logout</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main class="container">
+
+  <section class="card">
+    <h3>Assign New Exam</h3>
+    <p>Create and schedule an exam</p>
+    <a href="/assignExam" class="btn">Go</a>
+  </section>
+
+  <section class="card">
+    <h3>Add Questions</h3>
+    <p>Submit questions for an exam</p>
+    <a href="/submitQuestion" class="btn">Go</a>
+  </section>
+
+  <section class="card" id="registerCard">
+    <h3>Check Registered User</h3>
+    <p>Create and update a User</p>
+    <a href="/register" class="btn">Go</a>
+  </section>
+
+  <section class="card">
+    <h3>Available Exams</h3>
+    <ul id="examList"></ul>
+  </section>
+
+</main>
+
+<script>
+  // Mobile menu toggle
+document.getElementById("menuToggle").addEventListener("click", () => {
+  document.getElementById("navList").classList.toggle("show");
+});
+
+// Mobile dropdown toggle
+document.querySelector(".dropdown-toggle").addEventListener("click", (e) => {
+  e.preventDefault();
+  e.target.parentElement.classList.toggle("open");
+});
+
+// Role-based UI
+const role = localStorage.getItem("role");
+
+if (role !== "admin") {
+  document.querySelector('a[href="/register"]')?.remove();
+  document.getElementById("resultLink")?.remove();
+  document.getElementById("registerCard")?.remove();
+  document.getElementById("dropdownC")?.remove();
+   document.querySelector('a[href="/update-user"]')?.remove();
+}
+
+// Fetch exams
+fetch('/api/exam-courseTitle', {
+  headers: {
+    Authorization: 'Bearer ' + localStorage.getItem('token')
+  }
+})
+.then(res => res.json())
+.then(data => {
+  const list = document.getElementById('examList');
+  list.innerHTML = '';
+
+  data.forEach(exam => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <strong>${exam.courseTitle}</strong><br><br>
+      <a href="/exam-preview.html?examId=${exam.id}" class="btn">View Questions</a>
+      <br><br>
+      ${role === "admin"
+        ? `<button class="delete-btn" onclick="deleteExam(${exam.id})">Delete Exam</button>`
+        : `<em>Staff preview only</em>`}
+    `;
+    list.appendChild(li);
+  });
+});
+
+// Delete exam
+function deleteExam(id) {
+  const ok = confirm("Are you sure you want to delete exam "+(id)+' and Questions?');
+  if (!ok) return;
+
+  fetch(`/api/exam/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: 'Bearer ' + localStorage.getItem('token')
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.message || "Exam and Questions deleted");
+    location.reload();
+  })
+  .catch(err => {
+    alert("Failed to delete exam");
+    console.error(err);
+  });
+}
+
+
+function logout() {
+  localStorage.clear();
+  window.location.href = "/";
+}
+
+</script>
+</body>
+</html>
