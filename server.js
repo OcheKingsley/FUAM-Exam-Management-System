@@ -52,15 +52,25 @@ db.getConnection((err, connection) => {
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.sendStatus(401);
+
+  if (!token) {
+    return res.status(401).json({
+      message: "No token provided"
+    });
+  }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
+
+    if (err) {
+      return res.status(403).json({
+        message: "Invalid or expired token"
+      });
+    }
+
     req.user = user;
     next();
   });
 }
-
 function authorizeRoles(...roles) {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) return res.status(403).json({ message: 'Access denied' });
@@ -183,6 +193,60 @@ app.post('/login', (req, res) => {
       res.json({ message: 'Login successful', token, role: user.role, userId: user.roleSpecificField, fullName: user.fullName });
     }
   );
+});
+
+// Get logged-in user profile
+app.get('/api/me', authenticateToken, (req, res) => {
+
+  console.log("===== /api/me called =====");
+  console.log("User from token:", req.user);
+
+  db.query(
+    `SELECT 
+        id,
+        fullName,
+        email,
+        role,
+        roleSpecificField,
+        department,
+        level,
+        created_at
+     FROM registrations
+     WHERE id = ?`,
+    [req.user.id],
+
+    (err, result) => {
+
+      if (err) {
+        console.error("Database error:", err);
+
+        return res.status(500).json({
+          message: "Database error",
+          error: err.message
+        });
+      }
+
+
+      console.log("Database result:", result);
+
+
+      if (result.length === 0) {
+
+        console.log("No user found with ID:", req.user.id);
+
+        return res.status(404).json({
+          message: "User not found"
+        });
+      }
+
+
+      console.log("Sending user data:", result[0]);
+
+      res.json(result[0]);
+
+    }
+  );
+
 });
 
 // Update user (admin)
