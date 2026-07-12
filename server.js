@@ -8,7 +8,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 const app = express();
 
 // ===== Middleware =====
@@ -214,6 +214,6 @@ app.post('/api/reset-password', (req, res) => {
 });
 
 // ===== Start Server =====
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
