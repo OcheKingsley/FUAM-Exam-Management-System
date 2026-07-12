@@ -18,18 +18,35 @@ app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public'))); // Serve static files
 
+
 // ===== MySQL Connection =====
-const db = mysql.createConnection({
+const db = mysql.createPool({
   host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+  database: process.env.DB_NAME,
+
+  ssl: {
+    ca: fs.readFileSync('./ca.pem')
+  },
+
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-db.connect(err => {
-  if (err) throw err;
-  console.log('✅ Connected to MySQL database');
+// Test the connection
+db.getConnection((err, connection) => {
+  if (err) {
+    console.error('❌ Connection failed:', err);
+    return;
+  }
+
+  console.log('✅ Connected to Aiven MySQL');
+  connection.release();
 });
+
 
 // ===== Utility Functions =====
 function authenticateToken(req, res, next) {
@@ -68,14 +85,24 @@ app.get('/update-user', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'update-user.html'));
 });
 
-app.get(['/dashboard', '/student-dashboard', '/student-results', '/forgot-password'], (req, res) => {
-  const mapping = {
-    '/dashboard': 'dashboard/dashboard.html',
-    '/student-dashboard': 'dashboard/student-dashboard.html',
-    '/student-results': 'student-result.html',
-    '/forgot-password': 'forgot-password.html'
-  };
-  res.sendFile(path.join(__dirname, 'public', mapping[req.path]));
+app.get(
+  ['/dashboard', '/dashboard/', '/student-dashboard', '/student-results', '/forgot-password'],
+  (req, res) => {
+    console.log('Requested path:', req.path);
+    const mapping = {
+      '/dashboard': 'dashboard/dashboard.html',
+      '/dashboard/': 'dashboard/dashboard.html',
+
+      '/student-dashboard': 'dashboard/student-dashboard.html',
+
+      '/student-results': 'student-result.html',
+
+      '/forgot-password': 'forgot-password.html'
+    };
+
+    res.sendFile(
+      path.join(__dirname, 'public', mapping[req.path])
+    );
 });
 
 // ===== API Routes =====
