@@ -79,28 +79,47 @@
   });
 
   // Fetch exams
-  fetch('/api/student/exams', {
+fetch('/api/student/exams', {
   headers: {
     Authorization: 'Bearer ' + localStorage.getItem('token')
   }
 })
 
-    .then(res => res.json())
-    .then(data => {
-      const list = document.getElementById('examList');
-      list.innerHTML = '';
+.then(async res => {
 
-      data.forEach(exam => {
-        const li = document.createElement('li');
-        li.innerHTML = `
-          <strong>${exam.courseTitle}</strong><br>
-          <small>${exam.courseCode}</small><br>
-          <a href="/quiz/${exam.id}" class="btn">Take Exam</a>
-        `;
-        list.appendChild(li);
-      });
-    })
-    .catch(err => console.error("Error fetching exams:", err));
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
+  return res.json();
+
+})
+
+.then(data => {
+
+  const list = document.getElementById('examList');
+  list.innerHTML = '';
+
+  data.forEach(exam => {
+
+    const li = document.createElement('li');
+
+    li.innerHTML = `
+      <strong>${exam.courseTitle}</strong><br>
+      <small>${exam.courseCode}</small><br>
+      <a href="/quiz/${exam.id}" class="btn">Take Exam</a>
+    `;
+
+    list.appendChild(li);
+
+  });
+
+})
+
+.catch(err => {
+  console.error("Error fetching exams:", err);
+});
 
   // Logout function
   function logout() {
