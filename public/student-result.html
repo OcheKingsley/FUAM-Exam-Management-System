@@ -172,108 +172,180 @@
 <script>
 const token = localStorage.getItem("token");
 const btn = document.getElementById("downloadPdfBtn");
-let studentInfo = {};
+const tbody = document.getElementById("resultsBody");
 
+let studentInfo = {};
+let studentResults = [];
+
+// Check login
 if (!token) {
-  alert("Session expired. Please login again.");
+    alert("Session expired. Please login again.");
+    window.location.href = "/";
 }
 
-/* ===== FETCH RESULTS ===== */
+// ===============================
+// Load Student Results
+// ===============================
 fetch("/api/student/results", {
-  headers: { Authorization: "Bearer " + token }
+    headers: {
+        Authorization: "Bearer " + token
+    }
+})
+.then(async res => {
+
+    if (!res.ok) {
+        throw new Error(await res.text());
+    }
+
+    return res.json();
+
+})
+.then(results => {
+
+    console.log("Student Results:", results);
+
+    studentResults = results;
+
+    tbody.innerHTML = "";
+
+    if (results.length === 0) {
+
+        tbody.innerHTML = `
+        <tr>
+            <td colspan="6">No results available.</td>
+        </tr>`;
+
+        document.getElementById("cgpa").innerText = "0.00";
+        btn.disabled = true;
+        return;
+    }
+
+    let totalWeighted = 0;
+
+    results.forEach(r => {
+
+        totalWeighted += Number(r.weighted_score);
+
+        tbody.innerHTML += `
+        <tr>
+            <td>${r.courseCode}</td>
+            <td>${r.courseTitle}</td>
+            <td>${r.score}</td>
+            <td>${r.total_questions}</td>
+            <td>${Number(r.percentage).toFixed(2)}%</td>
+            <td>${Number(r.weighted_score).toFixed(2)}</td>
+        </tr>`;
+    });
+
+    const cgpa = totalWeighted / results.length;
+
+    document.getElementById("cgpa").innerText = cgpa.toFixed(2);
+
+    btn.disabled = false;
+
+})
+.catch(err => {
+
+    console.error(err);
+
+    tbody.innerHTML = `
+    <tr>
+        <td colspan="6">Failed to load results.</td>
+    </tr>`;
+
+});
+
+
+// ===============================
+// Load Student Profile
+// ===============================
+fetch("/api/me", {
+    headers: {
+        Authorization: "Bearer " + token
+    }
 })
 .then(res => res.json())
 .then(data => {
-  document.getElementById("cgpa").innerText =
-    Number(data.totalCGPA || 0).toFixed(2);
 
-  const tbody = document.getElementById("resultsBody");
-  tbody.innerHTML = "";
+    studentInfo = data;
 
-  if (!data.results || data.results.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6">No results available</td>
-      </tr>
-    `;
-    btn.disabled = true;
-    return;
-  }
-
-  data.results.forEach(r => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${r.courseCode}</td>
-        <td>${r.courseTitle}</td>
-        <td>${r.score}</td>
-        <td>${r.total_questions}</td>
-        <td>${Number(r.percentage).toFixed(2)}%</td>
-        <td>${Number(r.weighted_score).toFixed(2)}</td>
-      </tr>
-    `;
-  });
-
-  btn.disabled = false;
 })
-.catch(() => {
-  alert("Failed to load results");
-});
+.catch(console.error);
 
-/* ===== FETCH PROFILE ===== */
-fetch("/api/me", {
-  headers: { Authorization: "Bearer " + token }
-})
-.then(res => res.json())
-.then(data => studentInfo = data);
 
-/* ===== PDF DOWNLOAD (FIXED) ===== */
+// ===============================
+// Download PDF
+// ===============================
 btn.addEventListener("click", () => {
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF();
 
-  pdf.setFontSize(18);
-  pdf.text("STUDENT EXAM RESULT", 14, 20);
+    const { jsPDF } = window.jspdf;
 
-  pdf.setFontSize(11);
-  pdf.text(`Name: ${studentInfo.fullName || "N/A"}`, 14, 32);
-  pdf.text(`Student ID: ${studentInfo.roleSpecificField || "N/A"}`, 14, 40);
-  pdf.text(`Department: ${studentInfo.department || "N/A"}`, 14, 48);
-  pdf.text(`Level: ${studentInfo.level || "N/A"}`, 14, 56);
+    const pdf = new jsPDF();
 
-  pdf.text(`Total CGPA: ${document.getElementById("cgpa").innerText}`, 150, 32);
+    pdf.setFontSize(18);
+    pdf.text("STUDENT EXAM RESULT", 14, 20);
 
-  let y = 70;
+    pdf.setFontSize(11);
 
-  pdf.setFontSize(12);
-  ["Code","Title","Score","Total","%","Weighted"]
-    .forEach((h,i)=>pdf.text(h,[14,45,110,125,145,160][i],y));
+    pdf.text(`Name: ${studentInfo.fullName || ""}`, 14, 35);
+    pdf.text(`Student ID: ${studentInfo.roleSpecificField || ""}`, 14, 43);
+    pdf.text(`Department: ${studentInfo.department || ""}`, 14, 51);
+    pdf.text(`Level: ${studentInfo.level || ""}`, 14, 59);
 
-  y += 8;
+    pdf.text(`CGPA: ${document.getElementById("cgpa").innerText}`, 150, 35);
 
-  document.querySelectorAll("#resultsBody tr").forEach(row => {
-    const c = row.querySelectorAll("td");
+    let y = 75;
 
-    /* ✅ FIX: skip rows without full columns */
-    if (c.length < 6) return;
+    pdf.setFontSize(12);
 
-    pdf.text(c[0].innerText, 14, y);
-    pdf.text(c[1].innerText.substring(0, 28), 45, y);
-    pdf.text(c[2].innerText, 110, y);
-    pdf.text(c[3].innerText, 125, y);
-    pdf.text(c[4].innerText, 145, y);
-    pdf.text(c[5].innerText, 160, y);
+    pdf.text("Code",14,y);
+    pdf.text("Title",40,y);
+    pdf.text("Score",105,y);
+    pdf.text("Total",122,y);
+    pdf.text("%",142,y);
+    pdf.text("Weight",158,y);
 
-    y += 8;
-    if (y > 280) {
-      pdf.addPage();
-      y = 20;
-    }
-  });
+    y += 10;
 
-  pdf.setFontSize(10);
-  pdf.text(`Generated on ${new Date().toLocaleDateString()}`, 14, 290);
+    studentResults.forEach(r => {
 
-  pdf.save(`${studentInfo.roleSpecificField || "student"}_Exam_Result.pdf`);
+        pdf.text(String(r.courseCode),14,y);
+
+        pdf.text(
+            String(r.courseTitle).substring(0,25),
+            40,
+            y
+        );
+
+        pdf.text(String(r.score),105,y);
+
+        pdf.text(String(r.total_questions),122,y);
+
+        pdf.text(Number(r.percentage).toFixed(2),142,y);
+
+        pdf.text(Number(r.weighted_score).toFixed(2),158,y);
+
+        y += 8;
+
+        if(y > 280){
+            pdf.addPage();
+            y = 20;
+        }
+
+    });
+
+    pdf.setFontSize(10);
+
+    pdf.text(
+        "Generated on " + new Date().toLocaleDateString(),
+        14,
+        290
+    );
+
+    pdf.save(
+        `${studentInfo.roleSpecificField || "student"}_Result.pdf`
+    );
+
 });
 </script>
 
