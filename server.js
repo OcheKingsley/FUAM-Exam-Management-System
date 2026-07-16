@@ -99,6 +99,10 @@ app.get('/update-user', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'update-user.html'));
 });
 
+app.get('/admin-results', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard', 'admin-view-results.html'));
+});
+
 app.get(
   ['/dashboard', '/dashboard/', '/student-dashboard', '/student-results', '/forgot-password'],
   (req, res) => {
