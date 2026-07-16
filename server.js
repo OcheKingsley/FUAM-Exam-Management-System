@@ -103,6 +103,21 @@ app.get('/admin-results', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard', 'admin-view-results.html'));
 });
 
+app.get('/view-user', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard', 'view-user.html'));
+});
+
+app.get('/view-exam', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard', 'view-assign-exam.html'));
+});
+
+app.get('/view-questions', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard', 'view-question.html'));
+});
+
+app.get('/view-student', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard', 'view-student-ans.html'));
+});
 app.get(
   ['/dashboard', '/dashboard/', '/student-dashboard', '/student-results', '/forgot-password'],
   (req, res) => {
