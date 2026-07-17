@@ -318,6 +318,45 @@ app.get(
   }
 );
 
+// Get all student exam results (Admin only)
+app.get(
+  "/api/student-answers",
+  authenticateToken,
+  authorizeRoles("admin"),
+  (req, res) => {
+
+    db.query(
+      `
+      SELECT
+        student_id,
+        exam_id,
+        courseCode,
+        courseTitle,
+        score,
+        total_questions,
+        percentage,
+        weighted_score,
+        submitted_at
+      FROM exam_results
+      ORDER BY submitted_at DESC
+      `,
+      (err, results) => {
+
+        if (err) {
+          console.error(err);
+          return res.status(500).json({
+            message: "Database error"
+          });
+        }
+
+        res.json(results);
+
+      }
+    );
+
+  }
+);
+
 // ===== API Routes =====
 
 // Get next user ID
