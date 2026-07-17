@@ -276,6 +276,48 @@ app.get(
     }
 );
 
+// Get all questions (Admin only)
+app.get(
+  "/api/questions",
+  authenticateToken,
+  authorizeRoles("admin"),
+  (req, res) => {
+
+    db.query(
+      `
+      SELECT
+        q.id,
+        q.exam_id,
+        e.courseTitle,
+        e.courseCode,
+        q.question,
+        q.optionA,
+        q.optionB,
+        q.optionC,
+        q.optionD,
+        q.correctAnswer
+      FROM questions q
+      LEFT JOIN exam e
+      ON q.exam_id = e.id
+      ORDER BY q.exam_id, q.id
+      `,
+      (err, results) => {
+
+        if (err) {
+          console.error(err);
+          return res.status(500).json({
+            message: "Database error"
+          });
+        }
+
+        res.json(results);
+
+      }
+    );
+
+  }
+);
+
 // ===== API Routes =====
 
 // Get next user ID
