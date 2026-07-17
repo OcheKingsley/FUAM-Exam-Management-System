@@ -824,6 +824,41 @@ app.get('/api/student/exams', authenticateToken, authorizeRoles('student'), (req
 
 });
 
+app.get(
+  "/api/admin/users",
+  authenticateToken,
+  authorizeRoles("admin"),
+  (req, res) => {
+
+    db.query(
+      `
+      SELECT
+        roleSpecificField,
+        fullName,
+        email,
+        role,
+        department,
+        level,
+        created_at
+      FROM registrations
+      ORDER BY created_at DESC
+      `,
+      (err, results) => {
+
+        if (err) {
+          console.error(err);
+          return res.status(500).json({
+            message: "Database error"
+          });
+        }
+
+        res.json(results);
+      }
+    );
+
+  }
+);
+
 // Update user (admin)
 app.put('/api/user/:userId', authenticateToken, authorizeRoles('admin'), (req, res) => {
   const userId = req.params.userId;
