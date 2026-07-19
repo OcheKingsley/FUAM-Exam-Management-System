@@ -95,6 +95,10 @@ app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'reg.html'));
 });
 
+app.get('/quiz/:examId', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'quiz.html'));
+});
+
 app.get('/update-user', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'update-user.html'));
 });
