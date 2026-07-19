@@ -1025,6 +1025,45 @@ app.delete(
   }
 );
 
+app.get(
+  "/api/exam/:id/preview",
+  authenticateToken,
+  authorizeRoles("admin"),
+  (req, res) => {
+
+    const examId = req.params.id;
+
+    db.query(
+      `
+      SELECT
+          id,
+          question,
+          optionA,
+          optionB,
+          optionC,
+          optionD,
+          correctAnswer
+      FROM questions
+      WHERE exam_id = ?
+      ORDER BY id ASC
+      `,
+      [examId],
+      (err, results) => {
+
+        if (err) {
+          console.error(err);
+          return res.status(500).json({
+            message: "Database error"
+          });
+        }
+
+        res.json(results);
+      }
+    );
+
+  }
+);
+
 // ===== Global Error Handler =====
 app.use((err, req, res, next) => {
   console.error(err);
