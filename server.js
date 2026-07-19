@@ -960,6 +960,51 @@ app.put('/api/user/:userId', authenticateToken, authorizeRoles('admin'), (req, r
   );
 });
 
+// Get one user by User ID (Admin)
+app.get(
+  "/api/user/:userId",
+  authenticateToken,
+  authorizeRoles("admin"),
+  (req, res) => {
+
+    const userId = req.params.userId;
+
+    db.query(
+      `
+      SELECT
+        roleSpecificField,
+        fullName,
+        email,
+        department,
+        level,
+        role
+      FROM registrations
+      WHERE roleSpecificField = ?
+      `,
+      [userId],
+      (err, results) => {
+
+        if (err) {
+          console.error(err);
+          return res.status(500).json({
+            message: "Database error"
+          });
+        }
+
+        if (results.length === 0) {
+          return res.status(404).json({
+            message: `User ${userId} not found`
+          });
+        }
+
+        res.json(results[0]);
+
+      }
+    );
+
+  }
+);
+
 // Reset password
 app.post('/api/reset-password', (req, res) => {
   const { userId, newPassword } = req.body;
@@ -1080,43 +1125,6 @@ app.get(
   }
 );
 
-// Get all questions (Admin only)
-app.get(
-  '/api/questions',
-  authenticateToken,
-  authorizeRoles('admin'),
-  (req, res) => {
-
-    db.query(
-      `
-      SELECT
-        id,
-        exam_id,
-        question,
-        optionA,
-        optionB,
-        optionC,
-        optionD,
-        correctAnswer
-      FROM questions
-      ORDER BY exam_id ASC, id ASC
-      `,
-      (err, results) => {
-
-        if (err) {
-          console.error(err);
-          return res.status(500).json({
-            message: "Database error"
-          });
-        }
-
-        res.json(results);
-
-      }
-    );
-
-  }
-);
 // ===== Global Error Handler =====
 app.use((err, req, res, next) => {
   console.error(err);
