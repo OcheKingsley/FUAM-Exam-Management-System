@@ -143,63 +143,79 @@ function deleteQuestion(index) {
 }
 
 async function submitAllQuestions() {
+  const submitBtn = document.getElementById("submitAllQuestions");
+
+  // Prevent double click
+  if (submitBtn.disabled) return;
+
   if (questions.length === 0) {
     alert("No questions to submit.");
     return;
   }
 
-  // Verify that all questions have a non-null exam field
   const invalidQuestions = questions.filter(q => !q.examId);
+
   if (invalidQuestions.length > 0) {
-    alert('Some questions are missing the exam information.');
+    alert("Some questions are missing the exam information.");
     return;
   }
 
-  // Get token from localStorage
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
+
   if (!token) {
-    alert('You must be logged in to submit questions.');
+    alert("You must be logged in.");
     return;
   }
+
+  // Disable button immediately
+  submitBtn.disabled = true;
+  submitBtn.innerText = "Submitting...";
 
   try {
-    console.log('Submitting questions:', questions);
-    
-    const response = await fetch('/submitQuestion', {
-      method: 'POST',
+    const response = await fetch("/submitQuestion", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token // ✅ Add the token here
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
       },
       body: JSON.stringify(questions)
     });
 
+    const result = await response.json();
+
     if (response.ok) {
-      alert('All questions submitted successfully');
-      
-      const examSelect = document.getElementById('exam');
-      const selectedExamId = examSelect.value;
-      
-      const titles = questions.map(q => encodeURIComponent(q.question)).join(',');
-      const queryParams = new URLSearchParams({
-        status: 'success', 
-        examId: encodeURIComponent(selectedExamId), 
-        titles: titles
-      }).toString();
-      
-      console.log('Redirect URL:', `exam.html?${queryParams}`);
-      
-      //window.location.href = `exam.html?${queryParams}`;
+
+      alert(result.message);
+
+      // Clear submitted questions
+      questions = [];
+      displayQuestions();
+
+      // Optional: clear form
+      clearForm();
+
+      // Keep button disabled permanently
+      submitBtn.innerText = "Submitted";
+
     } else {
-      const errorText = await response.text(); 
-      alert(`Error submitting questions: ${errorText}`);
+
+      alert(result.message || "Submission failed.");
+
+      // Allow another attempt if it failed
+      submitBtn.disabled = false;
+      submitBtn.innerText = "Submit All Questions";
     }
+
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error submitting questions');
+
+    console.error(error);
+
+    alert("Network error. Please try again.");
+
+    submitBtn.disabled = false;
+    submitBtn.innerText = "Submit All Questions";
   }
 }
-
 
 
 
