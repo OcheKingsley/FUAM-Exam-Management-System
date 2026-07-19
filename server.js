@@ -1024,7 +1024,6 @@ app.delete(
 
   }
 );
-
 app.get(
   "/api/exam/:id/preview",
   authenticateToken,
@@ -1034,30 +1033,47 @@ app.get(
     const examId = req.params.id;
 
     db.query(
-      `
-      SELECT
-          id,
-          question,
-          optionA,
-          optionB,
-          optionC,
-          optionD,
-          correctAnswer
-      FROM questions
-      WHERE exam_id = ?
-      ORDER BY id ASC
-      `,
+      "SELECT courseTitle, courseCode FROM exam WHERE id = ?",
       [examId],
-      (err, results) => {
+      (err, exam) => {
 
         if (err) {
-          console.error(err);
-          return res.status(500).json({
-            message: "Database error"
-          });
+          return res.status(500).json({ message: "Database error" });
         }
 
-        res.json(results);
+        if (exam.length === 0) {
+          return res.status(404).json({ message: "Exam not found" });
+        }
+
+        db.query(
+          `
+          SELECT
+            id,
+            question,
+            optionA,
+            optionB,
+            optionC,
+            optionD,
+            correctAnswer
+          FROM questions
+          WHERE exam_id = ?
+          ORDER BY id ASC
+          `,
+          [examId],
+          (err2, questions) => {
+
+            if (err2) {
+              return res.status(500).json({ message: "Database error" });
+            }
+
+            res.json({
+              exam: exam[0],
+              questions: questions
+            });
+
+          }
+        );
+
       }
     );
 
