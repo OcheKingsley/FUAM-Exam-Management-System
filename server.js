@@ -1064,6 +1064,43 @@ app.get(
   }
 );
 
+// Get all questions (Admin only)
+app.get(
+  '/api/questions',
+  authenticateToken,
+  authorizeRoles('admin'),
+  (req, res) => {
+
+    db.query(
+      `
+      SELECT
+        id,
+        exam_id,
+        question,
+        optionA,
+        optionB,
+        optionC,
+        optionD,
+        correctAnswer
+      FROM questions
+      ORDER BY exam_id ASC, id ASC
+      `,
+      (err, results) => {
+
+        if (err) {
+          console.error(err);
+          return res.status(500).json({
+            message: "Database error"
+          });
+        }
+
+        res.json(results);
+
+      }
+    );
+
+  }
+);
 // ===== Global Error Handler =====
 app.use((err, req, res, next) => {
   console.error(err);
