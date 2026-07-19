@@ -15,9 +15,10 @@ async function fetchUser() {
   });
 
   if (!res.ok) {
-    alert("User not found");
-    return;
-  }
+  const error = await res.json();
+  alert(error.message || "An error occurred");
+  return;
+}
 
   const user = await res.json();
 
