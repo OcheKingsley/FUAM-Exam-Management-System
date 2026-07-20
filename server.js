@@ -388,86 +388,61 @@ app.get('/api/next-id/:role', (req, res) => {
 });
 
 // Get questions for a particular exam (Eligible students only)
-app.get(
-  "/api/quiz/:examId",
-  authenticateToken,
-  authorizeRoles("student"),
-  (req, res) => {
+app.get("/api/quiz/:examId", authenticateToken, authorizeRoles("student"), (req, res) => {
 
     const examId = req.params.examId;
 
-    db.query(
-      `
-      SELECT
-          q.id,
-          q.question,
-          q.optionA,
-          q.optionB,
-          q.optionC,
-          q.optionD,
-          e.examTime,
-          e.endTime
-      FROM questions q
-      JOIN exam e
-      ON q.exam_id = e.id
-      WHERE q.exam_id = ?
-      AND e.eligibleDepartment = ?
-      AND e.eligibleLevel = ?
-      `,
-      [
-        examId,
-        req.user.department,
-        req.user.level
-      ],
-      (err, results) => {
+    db.query(`
+        SELECT
+            e.id,
+            e.courseTitle,
+            e.courseCode,
+            e.eligibleDepartment,
+            e.eligibleLevel,
+            e.allocatedTime,
+            q.id AS questionId,
+            q.question,
+            q.optionA,
+            q.optionB,
+            q.optionC,
+            q.optionD
+        FROM exam e
+        JOIN questions q ON e.id = q.exam_id
+        WHERE e.id = ?
+    `,[examId],(err,results)=>{
 
-        if (err) {
-          console.error(err);
-          return res.status(500).json({
-            message: "Database error"
-          });
+        if(err) return res.status(500).json({message:"Database error"});
+
+        if(results.length===0){
+            return res.status(404).json({message:"No questions"});
         }
 
-        if (results.length === 0) {
-          return res.status(403).json({
-            message: "You are not eligible to take this exam or no questions were found."
-          });
-        }
+        const exam={
+            id:results[0].id,
+            courseTitle:results[0].courseTitle,
+            courseCode:results[0].courseCode,
+            eligibleDepartment:results[0].eligibleDepartment,
+            eligibleLevel:results[0].eligibleLevel,
+            allocatedTime:results[0].allocatedTime
+        };
 
-        // Check exam time
-        const now = new Date();
-        const examTime = new Date(results[0].examTime);
-        const endTime = new Date(results[0].endTime);
-
-        if (now < examTime) {
-          return res.status(403).json({
-            message: "Exam has not started."
-          });
-        }
-
-        if (now > endTime) {
-          return res.status(403).json({
-            message: "Exam has ended."
-          });
-        }
-
-        // Remove examTime and endTime before sending questions
-        const questions = results.map(question => ({
-          id: question.id,
-          question: question.question,
-          optionA: question.optionA,
-          optionB: question.optionB,
-          optionC: question.optionC,
-          optionD: question.optionD
+        const questions=results.map(r=>({
+            id:r.questionId,
+            question:r.question,
+            optionA:r.optionA,
+            optionB:r.optionB,
+            optionC:r.optionC,
+            optionD:r.optionD
         }));
 
-        res.json(questions);
+        res.json({
+            exam,
+            questions
+        });
 
-      }
-    );
+    });
 
-  }
-);
+});
 
 // Register user (admin only)
 app.post('/register', authenticateToken, authorizeRoles('admin'), (req, res) => {
