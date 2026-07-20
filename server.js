@@ -394,91 +394,132 @@ authenticateToken,
 authorizeRoles("student"),
 (req,res)=>{
 
-const examId=req.params.examId;
+    const examId = req.params.examId;
 
-db.query(`
-SELECT
-e.id,
-e.courseTitle,
-e.courseCode,
-e.eligibleDepartment,
-e.eligibleLevel,
-e.allocatedTime,
-e.examTime,
-e.endTime,
-q.id AS questionId,
-q.question,
-q.optionA,
-q.optionB,
-q.optionC,
-q.optionD
+    db.query(`
+        SELECT
+            e.id,
+            e.courseTitle,
+            e.courseCode,
+            e.eligibleDepartment,
+            e.eligibleLevel,
+            e.allocatedTime,
+            e.examTime,
+            e.endTime,
 
-FROM exam e
-JOIN questions q ON e.id=q.exam_id
+            q.id AS questionId,
+            q.question,
+            q.optionA,
+            q.optionB,
+            q.optionC,
+            q.optionD
 
-WHERE e.id=?
-AND e.eligibleDepartment=?
-AND e.eligibleLevel=?
+        FROM exam e
+        JOIN questions q 
+        ON e.id = q.exam_id
 
-`,[
-examId,
-req.user.department,
-req.user.level
+        WHERE e.id = ?
+        AND e.eligibleDepartment = ?
+        AND e.eligibleLevel = ?
 
-],(err,results)=>{
+    `,
+    [
+        examId,
+        req.user.department,
+        req.user.level
 
-if(err)
-return res.status(500).json({message:"Database error"});
+    ],
+    (err,results)=>{
 
-
-if(results.length===0)
-return res.status(403).json({
-message:"You are not eligible or no questions found"
-});
-
-
-const now=new Date();
-const start=new Date(results[0].examTime);
-const end=new Date(results[0].endTime);
+        if(err){
+            console.error(err);
+            return res.status(500).json({
+                message:"Database error"
+            });
+        }
 
 
-if(now < start)
-return res.status(403).json({
-message:"Exam has not started"
-});
+        if(results.length === 0){
+
+            return res.status(403).json({
+                message:"You are not eligible for this exam or no questions found"
+            });
+
+        }
 
 
-if(now > end)
-return res.status(403).json({
-message:"Exam has ended"
-});
+        // Check exam time
+        const now = new Date();
+
+        const examStart = new Date(results[0].examTime);
+        const examEnd = new Date(results[0].endTime);
 
 
-const exam={
-id:results[0].id,
-courseTitle:results[0].courseTitle,
-courseCode:results[0].courseCode,
-allocatedTime:results[0].allocatedTime
-};
+        if(now < examStart){
+
+            return res.status(403).json({
+                message:"Exam has not started yet"
+            });
+
+        }
 
 
-const questions=results.map(r=>({
-id:r.questionId,
-question:r.question,
-optionA:r.optionA,
-optionB:r.optionB,
-optionC:r.optionC,
-optionD:r.optionD
-}));
+        if(now > examEnd){
+
+            return res.status(403).json({
+                message:"Exam time has ended"
+            });
+
+        }
 
 
-res.json({
-exam,
-questions
-});
+
+        const exam = {
+
+            id: results[0].id,
+
+            courseTitle: results[0].courseTitle,
+
+            courseCode: results[0].courseCode,
+
+            allocatedTime: results[0].allocatedTime,
+
+            examTime: results[0].examTime,
+
+            endTime: results[0].endTime
+
+        };
 
 
-});
+
+        const questions = results.map(row=>({
+
+            id: row.questionId,
+
+            question: row.question,
+
+            optionA: row.optionA,
+
+            optionB: row.optionB,
+
+            optionC: row.optionC,
+
+            optionD: row.optionD
+
+        }));
+
+
+
+        res.json({
+
+            exam,
+
+            questions
+
+        });
+
+
+    });
 
 });
 
@@ -683,35 +724,17 @@ app.post(
   authorizeRoles("student"),
   (req, res) => {
 
-    const {
-      examId,
-      score,
-      total_questions,
-      percentage,
-      weighted_score
-    } = req.body;
+    const { examId, answers = {} } = req.body;
 
-    // Validate required fields
-    if (
-      !examId ||
-      score === undefined ||
-      total_questions === undefined ||
-      percentage === undefined ||
-      weighted_score === undefined
-    ) {
+
+    if (!examId) {
       return res.status(400).json({
-        message: "All fields are required."
+        message: "Exam ID is required"
       });
     }
 
-    // Validate score
-    if (score > total_questions || score < 0) {
-      return res.status(400).json({
-        message: "Invalid score."
-      });
-    }
 
-    // Check if exam exists
+    // Get exam details
     db.query(
       `
       SELECT
@@ -723,6 +746,7 @@ app.post(
       [examId],
       (err, exam) => {
 
+
         if (err) {
           console.error(err);
           return res.status(500).json({
@@ -730,22 +754,27 @@ app.post(
           });
         }
 
+
         if (exam.length === 0) {
           return res.status(404).json({
             message: "Exam not found"
           });
         }
 
-        // Check whether student has already submitted this exam
+
+
+        // Get questions and correct answers
         db.query(
           `
-          SELECT id
-          FROM exam_results
-          WHERE student_id = ?
-          AND exam_id = ?
+          SELECT
+              id,
+              correctAnswer
+          FROM questions
+          WHERE exam_id = ?
           `,
-          [req.user.userId, examId],
-          (err, existing) => {
+          [examId],
+          (err, questions) => {
+
 
             if (err) {
               console.error(err);
@@ -754,57 +783,157 @@ app.post(
               });
             }
 
-            if (existing.length > 0) {
-              return res.status(400).json({
-                message: "You have already submitted this exam."
+
+
+            if (questions.length === 0) {
+              return res.status(404).json({
+                message: "No questions found"
               });
             }
 
-            // Save exam result
+
+
+            let score = 0;
+
+            const total_questions = questions.length;
+
+
+
+            // Check answers
+            questions.forEach(question => {
+
+              const studentAnswer = answers[question.id];
+
+
+              // unanswered questions are ignored = zero mark
+              if (
+                studentAnswer &&
+                studentAnswer === question.correctAnswer
+              ) {
+
+                score++;
+
+              }
+
+            });
+
+
+
+            const percentage = 
+              ((score / total_questions) * 100).toFixed(2);
+
+
+
+            // if exam has unit allocation
+            // adjust weighted score here if needed
+            const weighted_score = percentage;
+
+
+
+            // Check previous submission
             db.query(
               `
-              INSERT INTO exam_results
-              (
-                  student_id,
-                  exam_id,
-                  courseCode,
-                  courseTitle,
-                  score,
-                  total_questions,
-                  percentage,
-                  weighted_score
-              )
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              SELECT id
+              FROM exam_results
+              WHERE student_id = ?
+              AND exam_id = ?
               `,
               [
                 req.user.userId,
-                examId,
-                exam[0].courseCode,
-                exam[0].courseTitle,
-                score,
-                total_questions,
-                percentage,
-                weighted_score
+                examId
               ],
-              (err2) => {
+              (err, existing) => {
 
-                if (err2) {
-                  console.error(err2);
+
+
+                if (err) {
+                  console.error(err);
                   return res.status(500).json({
-                    message: "Failed to save result"
+                    message:"Database error"
                   });
                 }
 
-                res.json({
-                  success: true,
-                  message: "Exam submitted successfully."
-                });
+
+
+                if(existing.length > 0){
+
+                  return res.status(400).json({
+                    message:"You have already submitted this exam."
+                  });
+
+                }
+
+
+
+
+                // Save result
+                db.query(
+                  `
+                  INSERT INTO exam_results
+                  (
+                    student_id,
+                    exam_id,
+                    courseCode,
+                    courseTitle,
+                    score,
+                    total_questions,
+                    percentage,
+                    weighted_score
+                  )
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  `,
+                  [
+                    req.user.userId,
+                    examId,
+                    exam[0].courseCode,
+                    exam[0].courseTitle,
+                    score,
+                    total_questions,
+                    percentage,
+                    weighted_score
+                  ],
+
+                  (err2)=>{
+
+
+                    if(err2){
+
+                      console.error(err2);
+
+                      return res.status(500).json({
+                        message:"Failed to save result"
+                      });
+
+                    }
+
+
+
+                    res.json({
+
+                      success:true,
+
+                      message:"Exam submitted successfully",
+
+                      result:{
+                        score,
+                        total_questions,
+                        percentage,
+                        weighted_score
+                      }
+
+                    });
+
+
+                  }
+                );
+
 
               }
             );
 
           }
         );
+
 
       }
     );
