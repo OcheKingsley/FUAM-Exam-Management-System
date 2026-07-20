@@ -388,59 +388,97 @@ app.get('/api/next-id/:role', (req, res) => {
 });
 
 // Get questions for a particular exam (Eligible students only)
-app.get("/api/quiz/:examId", authenticateToken, authorizeRoles("student"), (req, res) => {
+app.get(
+"/api/quiz/:examId",
+authenticateToken,
+authorizeRoles("student"),
+(req,res)=>{
 
-    const examId = req.params.examId;
+const examId=req.params.examId;
 
-    db.query(`
-        SELECT
-            e.id,
-            e.courseTitle,
-            e.courseCode,
-            e.eligibleDepartment,
-            e.eligibleLevel,
-            e.allocatedTime,
-            q.id AS questionId,
-            q.question,
-            q.optionA,
-            q.optionB,
-            q.optionC,
-            q.optionD
-        FROM exam e
-        JOIN questions q ON e.id = q.exam_id
-        WHERE e.id = ?
-    `,[examId],(err,results)=>{
+db.query(`
+SELECT
+e.id,
+e.courseTitle,
+e.courseCode,
+e.eligibleDepartment,
+e.eligibleLevel,
+e.allocatedTime,
+e.examTime,
+e.endTime,
+q.id AS questionId,
+q.question,
+q.optionA,
+q.optionB,
+q.optionC,
+q.optionD
 
-        if(err) return res.status(500).json({message:"Database error"});
+FROM exam e
+JOIN questions q ON e.id=q.exam_id
 
-        if(results.length===0){
-            return res.status(404).json({message:"No questions"});
-        }
+WHERE e.id=?
+AND e.eligibleDepartment=?
+AND e.eligibleLevel=?
 
-        const exam={
-            id:results[0].id,
-            courseTitle:results[0].courseTitle,
-            courseCode:results[0].courseCode,
-            eligibleDepartment:results[0].eligibleDepartment,
-            eligibleLevel:results[0].eligibleLevel,
-            allocatedTime:results[0].allocatedTime
-        };
+`,[
+examId,
+req.user.department,
+req.user.level
 
-        const questions=results.map(r=>({
-            id:r.questionId,
-            question:r.question,
-            optionA:r.optionA,
-            optionB:r.optionB,
-            optionC:r.optionC,
-            optionD:r.optionD
-        }));
+],(err,results)=>{
 
-        res.json({
-            exam,
-            questions
-        });
+if(err)
+return res.status(500).json({message:"Database error"});
 
-    });
+
+if(results.length===0)
+return res.status(403).json({
+message:"You are not eligible or no questions found"
+});
+
+
+const now=new Date();
+const start=new Date(results[0].examTime);
+const end=new Date(results[0].endTime);
+
+
+if(now < start)
+return res.status(403).json({
+message:"Exam has not started"
+});
+
+
+if(now > end)
+return res.status(403).json({
+message:"Exam has ended"
+});
+
+
+const exam={
+id:results[0].id,
+courseTitle:results[0].courseTitle,
+courseCode:results[0].courseCode,
+allocatedTime:results[0].allocatedTime
+};
+
+
+const questions=results.map(r=>({
+id:r.questionId,
+question:r.question,
+optionA:r.optionA,
+optionB:r.optionB,
+optionC:r.optionC,
+optionD:r.optionD
+}));
+
+
+res.json({
+exam,
+questions
+});
+
+
+});
 
 });
 
