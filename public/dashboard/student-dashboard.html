@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Dashboard</title>
-  <link rel="stylesheet" href="/dashboard/dashboard.css" />
+  <link rel="stylesheet" href="/dashboard/student-dashboard.css" />
 </head>
 <body>
 
-  <header class="navbar">
+  <header class="student-navbar">
     <h2>Online Exam System</h2>
     <nav>
       <a href="/home">Home</a>
@@ -16,10 +17,10 @@
     </nav>
   </header>
 
-  <main class="container">
+  <main class="student-container">
 
     <!-- Welcome Card -->
-    <section class="card">
+    <section class="student-card">
       <h3>Welcome 👋</h3>
       <h3>My Profile</h3>
   <p><strong>Name:</strong> <span id="name"></span></p>
@@ -30,17 +31,17 @@
     </section>
 
     <!-- Take Exam -->
-    <section class="card">
+    <section class="student-card">
       <h3>Available Exams</h3>
       <p>Select an exam to begin</p>
       <ul id="examList"></ul>
     </section>
 
     <!-- Results -->
-    <section class="card">
+    <section class="student-card">
       <h3>My Results</h3>
       <p>View your exam scores</p>
-      <a href="/student-results" class="btn">View Results</a>
+      <a href="/student-results" class="student-btn">View Results</a>
     </section>
 
   </main>
