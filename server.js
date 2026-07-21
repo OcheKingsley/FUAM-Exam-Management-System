@@ -332,22 +332,28 @@ app.get(
     db.query(
       `
       SELECT
-        student_id,
-        exam_id,
-        courseCode,
-        courseTitle,
-        score,
-        total_questions,
-        percentage,
-        weighted_score,
-        submitted_at
-      FROM exam_results
-      ORDER BY submitted_at DESC
+        sa.student_id,
+        e.courseCode,
+        e.courseTitle,
+        q.question,
+        sa.selected_answer,
+        q.correctAnswer
+
+      FROM student_answers sa
+
+      JOIN exam e
+      ON sa.exam_id = e.id
+
+      JOIN questions q
+      ON sa.question_id = q.id
+
+      ORDER BY sa.id DESC
       `,
       (err, results) => {
 
         if (err) {
           console.error(err);
+
           return res.status(500).json({
             message: "Database error"
           });
@@ -740,14 +746,14 @@ app.post(
     db.query(
       `
       SELECT
-          courseCode,
-          courseTitle
+        courseCode,
+        courseTitle
       FROM exam
       WHERE id = ?
       `,
       [examId],
-      (err, exam) => {
 
+      (err, exam) => {
 
         if (err) {
           console.error(err);
@@ -765,16 +771,17 @@ app.post(
 
 
 
-        // Get questions and correct answers
+        // Get questions
         db.query(
           `
           SELECT
-              id,
-              correctAnswer
+            id,
+            correctAnswer
           FROM questions
           WHERE exam_id = ?
           `,
           [examId],
+
           (err, questions) => {
 
 
@@ -784,7 +791,6 @@ app.post(
                 message: "Database error"
               });
             }
-
 
 
             if (questions.length === 0) {
@@ -801,13 +807,12 @@ app.post(
 
 
 
-            // Check answers
+            // Calculate score
             questions.forEach(question => {
 
               const studentAnswer = answers[question.id];
 
 
-              // unanswered questions are ignored = zero mark
               if (
                 studentAnswer &&
                 studentAnswer === question.correctAnswer
@@ -821,13 +826,11 @@ app.post(
 
 
 
-            const percentage = 
+            const percentage =
               ((score / total_questions) * 100).toFixed(2);
 
 
 
-            // if exam has unit allocation
-            // adjust weighted score here if needed
             const weighted_score = percentage;
 
 
@@ -844,8 +847,8 @@ app.post(
                 req.user.userId,
                 examId
               ],
-              (err, existing) => {
 
+              (err, existing) => {
 
 
                 if (err) {
@@ -868,7 +871,7 @@ app.post(
 
 
 
-                // Save result
+                // Save exam result
                 db.query(
                   `
                   INSERT INTO exam_results
@@ -884,6 +887,7 @@ app.post(
                   )
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                   `,
+
                   [
                     req.user.userId,
                     examId,
@@ -894,6 +898,7 @@ app.post(
                     percentage,
                     weighted_score
                   ],
+
 
                   (err2)=>{
 
@@ -910,35 +915,124 @@ app.post(
 
 
 
-                    res.json({
+                    // Prepare answers for saving
 
-                      success:true,
+                    const answerValues = Object.keys(answers).map(questionId => [
 
-                      message:"Exam submitted successfully",
+                      req.user.userId,
+                      examId,
+                      questionId,
+                      answers[questionId]
 
-                      result:{
-                        score,
-                        total_questions,
-                        percentage,
-                        weighted_score
-                      }
+                    ]);
 
-                    });
+
+
+
+                    // Save student answers
+
+                    if(answerValues.length > 0){
+
+
+                      db.query(
+
+                        `
+                        INSERT INTO student_answers
+                        (
+                          student_id,
+                          exam_id,
+                          question_id,
+                          selected_answer
+                        )
+                        VALUES ?
+                        `,
+
+                        [answerValues],
+
+
+                        (answerErr)=>{
+
+
+                          if(answerErr){
+
+                            console.error(answerErr);
+
+
+                            return res.status(500).json({
+                              message:"Failed to save answers"
+                            });
+
+                          }
+
+
+
+                          return res.json({
+
+                            success:true,
+
+                            message:"Exam submitted successfully",
+
+                            result:{
+                              score,
+                              total_questions,
+                              percentage,
+                              weighted_score
+                            }
+
+                          });
+
+
+                        }
+
+                      );
+
+
+                    }else{
+
+
+                      return res.json({
+
+                        success:true,
+
+                        message:"Exam submitted successfully",
+
+                        result:{
+                          score,
+                          total_questions,
+                          percentage,
+                          weighted_score
+                        }
+
+                      });
+
+
+                    }
+
 
 
                   }
+
+
                 );
 
 
               }
+
+
             );
 
+
           }
+
+
         );
 
 
       }
+
+
     );
+
 
   }
 );
