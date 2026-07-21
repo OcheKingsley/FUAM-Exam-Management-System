@@ -133,28 +133,44 @@ function updateNavButtons() {
 
 // ---------------- SUBMIT ----------------
 function submitExam() {
+
+    console.log("Exam ID:", examId);
+    console.log("Answers:", userAnswers);
+
     fetch('/api/submit-exam', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + localStorage.getItem('token')
         },
-        body: JSON.stringify({ examId, answers: userAnswers })
+        body: JSON.stringify({
+            examId: examId,
+            answers: userAnswers
+        })
     })
     .then(res => res.json())
     .then(data => {
+
+        console.log("Server response:", data);
+
+        if(!data.success){
+            alert(data.message);
+            return;
+        }
+
         document.body.innerHTML = `
-            <div style="text-align:center; margin-top:50px;">
+            <div style="text-align:center;margin-top:50px;">
                 <h2>Exam Submitted Successfully</h2>
-                <p>Score: ${data.score}/${data.total}</p>
-                <p>Percentage: ${data.percentage.toFixed(2)}%</p>
-                <p>Weighted Score: ${data.weighted.toFixed(2)}</p>
+                <p>Score: ${data.result.score}/${data.result.total_questions}</p>
+                <p>Percentage: ${data.result.percentage}%</p>
             </div>
         `;
     })
-    .catch(() => alert("Submission failed"));
+    .catch(err=>{
+        console.error(err);
+        alert("Submission failed");
+    });
 }
-
 // ---------------- TIMER ----------------
 function startTimer() {
     const timerContainer = document.getElementById('timer-container');

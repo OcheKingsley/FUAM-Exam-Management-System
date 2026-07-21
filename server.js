@@ -473,22 +473,25 @@ authorizeRoles("student"),
         }
 
 
-
         const exam = {
 
-            id: results[0].id,
+    id: results[0].id,
 
-            courseTitle: results[0].courseTitle,
+    courseTitle: results[0].courseTitle,
 
-            courseCode: results[0].courseCode,
+    courseCode: results[0].courseCode,
 
-            allocatedTime: results[0].allocatedTime,
+    eligibleDepartment: results[0].eligibleDepartment,
 
-            examTime: results[0].examTime,
+    eligibleLevel: results[0].eligibleLevel,
 
-            endTime: results[0].endTime
+    allocatedTime: results[0].allocatedTime,
 
-        };
+    examTime: results[0].examTime,
+
+    endTime: results[0].endTime
+
+};
 
 
 
