@@ -335,6 +335,7 @@ app.get(
         sa.student_id,
         e.courseCode,
         e.courseTitle,
+        sa.question_id,
         q.question,
         sa.selected_answer,
         q.correctAnswer
