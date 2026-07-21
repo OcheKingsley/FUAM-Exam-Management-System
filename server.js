@@ -494,7 +494,6 @@ authorizeRoles("student"),
 };
 
 
-
         const questions = results.map(row=>({
 
             id: row.questionId,
@@ -1021,36 +1020,47 @@ app.get('/api/me', authenticateToken, (req, res) => {
 });
 
 // Get available exams for students
-app.get('/api/student/exams', authenticateToken, authorizeRoles('student'), (req, res) => {
+app.get('/api/student/exams',
+authenticateToken,
+authorizeRoles('student'),
+(req,res)=>{
 
-  const department = req.user.department;
-  const level = req.user.level;
+    db.query(
+        `
+        SELECT
+            e.id,
+            e.courseTitle,
+            e.courseCode
+        FROM exam e
+        WHERE
+            e.eligibleDepartment = ?
+            AND e.eligibleLevel = ?
+            AND NOT EXISTS (
+                SELECT 1
+                FROM exam_results er
+                WHERE er.exam_id = e.id
+                AND er.student_id = ?
+            )
+        ORDER BY e.examTime ASC
+        `,
+        [
+            req.user.department,
+            req.user.level,
+            req.user.userId
+        ],
+        (err,result)=>{
 
-  db.query(
-  `
-  SELECT
-    id,
-    courseTitle,
-    courseCode
-  FROM exam
-  WHERE eligibleDepartment = ?
-  AND eligibleLevel = ?
-  ORDER BY examTime ASC
-  `,
-  [department, level],
-  (err, result) => {
-    if (err) {
-      console.error("Exam loading error:", err);
+            if(err){
+                console.error(err);
+                return res.status(500).json({
+                    message:"Database error"
+                });
+            }
 
-      return res.status(500).json({
-        message: "Database error",
-        error: err.message
-      });
-    }
+            res.json(result);
 
-    res.json(result);
-  }
-);
+        }
+    );
 
 });
 
