@@ -248,6 +248,7 @@ app.get(
   }
 );
 
+ 
 // admin exam view 
 app.get(
     '/api/exam-courseTitle',
@@ -259,9 +260,15 @@ app.get(
             SELECT
                 id,
                 courseTitle,
-                courseCode
+                courseCode,
+                eligibleDepartment,
+                eligibleLevel,
+                unitAllocated,
+                allocatedTime,
+                examTime,
+                endTime
             FROM exam
-           ORDER BY examTime ASC
+            ORDER BY examTime ASC
             `,
             (err, results) => {
 
