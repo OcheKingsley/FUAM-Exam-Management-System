@@ -66,16 +66,31 @@ let usersData = [];
 
 function loadAllUsers() {
   fetch('/api/admin/users', { headers:{Authorization:'Bearer '+token} })
-    .then(res=>res.json())
-    .then(data => { usersData = data; renderUsers(data); });
+    .then(res => res.json())
+    .then(data => {
+      if (!Array.isArray(data)) {
+        document.getElementById('usersBody').innerHTML = `<tr><td colspan="6" class="empty" style="color:#dc2626;">Error loading users</td></tr>`;
+        return;
+      }
+      usersData = data;
+      renderUsers(data);
+    })
+    .catch(err => {
+      console.error(err);
+      document.getElementById('usersBody').innerHTML = `<tr><td colspan="6" class="empty" style="color:#dc2626;">Failed to load users</td></tr>`;
+    });
 }
 
 function searchUsers() {
-  const val = document.getElementById('userSearchInput').value.toLowerCase();
+  const val = document.getElementById('userSearchInput').value.toLowerCase().trim();
+  if (!val) {
+    renderUsers(usersData);
+    return;
+  }
   const filtered = usersData.filter(u => 
-    u.user_id.toLowerCase().includes(val) ||
-    u.name.toLowerCase().includes(val) ||
-    u.email.toLowerCase().includes(val)
+    (u.roleSpecificField || '').toLowerCase().includes(val) ||
+    (u.fullName || '').toLowerCase().includes(val) ||
+    (u.email || '').toLowerCase().includes(val)
   );
   renderUsers(filtered);
 }
@@ -88,14 +103,25 @@ function renderUsers(data){
   }
 
   body.innerHTML = data.map(u=>`<tr>
-    <td>${u.user_id || 'N/A'}</td>
-    <td>${u.name || 'N/A'}</td>
-    <td>${u.email || 'N/A'}</td>
-    <td>${u.role || 'N/A'}</td>
-    <td>${u.department || 'N/A'}</td>
-    <td>${u.level || 'N/A'}</td>
+    <td>${escapeHtml(u.roleSpecificField) || 'N/A'}</td>
+    <td>${escapeHtml(u.fullName) || 'N/A'}</td>
+    <td>${escapeHtml(u.email) || 'N/A'}</td>
+    <td>${escapeHtml(u.role) || 'N/A'}</td>
+    <td>${escapeHtml(u.department) || 'N/A'}</td>
+    <td>${escapeHtml(u.level) || 'N/A'}</td>
   </tr>`).join('');
 }
+
+function escapeHtml(text) {
+  if (text === null || text === undefined) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+document.getElementById('userSearchInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') searchUsers();
+});
 
 loadAllUsers();
 </script>
