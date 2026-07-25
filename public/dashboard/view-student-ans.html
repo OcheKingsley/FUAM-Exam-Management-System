@@ -58,17 +58,34 @@ td { color:var(--text); }
     </div>
   </div>
 </div>
-
 <script>
 const token = localStorage.getItem('token');
 let answersData = [];
 
 // Fetch all student answers
 function loadAllAnswers() {
+  const body = document.getElementById('answersBody');
+  body.innerHTML = `<tr><td colspan="5" class="empty">Loading...</td></tr>`;
+
   fetch('/api/student-answers', { headers:{ Authorization: 'Bearer ' + token } })
-    .then(res => res.json())
+    .then(async res => {
+      const data = await res.json();
+      
+      // Handle API errors (403, 500, etc.)
+      if (!res.ok) {
+        throw new Error(data.message || `Server error: ${res.status}`);
+      }
+      
+      // Handle non-array responses
+      if (!Array.isArray(data)) {
+        console.error('Unexpected API response:', data);
+        throw new Error('Invalid data format received from server');
+      }
+      
+      return data;
+    })
     .then(data => {
-      // Handle null data gracefully
+      // Handle null/undefined values gracefully
       answersData = data.map(a => ({
         student_id: a.student_id || 'N/A',
         courseCode: a.courseCode || 'N/A',
@@ -80,16 +97,22 @@ function loadAllAnswers() {
     })
     .catch(err => {
       console.error(err);
-      document.getElementById('answersBody').innerHTML = `<tr><td colspan="5" class="empty">Failed to load data</td></tr>`;
+      document.getElementById('answersBody').innerHTML = 
+        `<tr><td colspan="5" class="empty" style="color:#dc2626;">Error: ${err.message}</td></tr>`;
     });
 }
 
 // Search function
 function searchAnswers() {
-  const val = document.getElementById('searchInput').value.toLowerCase();
+  const val = document.getElementById('searchInput').value.toLowerCase().trim();
+  if (!val) {
+    renderAnswers(answersData);
+    return;
+  }
   const filtered = answersData.filter(a => 
-    a.student_id.toLowerCase().includes(val) || 
-    a.courseTitle.toLowerCase().includes(val)
+    (a.student_id || '').toLowerCase().includes(val) || 
+    (a.courseTitle || '').toLowerCase().includes(val) ||
+    (a.courseCode || '').toLowerCase().includes(val)
   );
   renderAnswers(filtered);
 }
@@ -103,13 +126,26 @@ function renderAnswers(data){
   }
 
   body.innerHTML = data.map(a => `<tr>
-    <td>${a.student_id}</td>
-    <td>${a.courseCode}</td>
-    <td>${a.courseTitle}</td>
-    <td>${a.question_id}</td>
-    <td>${a.selected_answer}</td>
+    <td>${escapeHtml(a.student_id)}</td>
+    <td>${escapeHtml(a.courseCode)}</td>
+    <td>${escapeHtml(a.courseTitle)}</td>
+    <td>${escapeHtml(a.question_id)}</td>
+    <td>${escapeHtml(a.selected_answer)}</td>
   </tr>`).join('');
 }
+
+// Prevent XSS
+function escapeHtml(text) {
+  if (text === null || text === undefined) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Allow "Enter" key to trigger search
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') searchAnswers();
+});
 
 // Initial load
 loadAllAnswers();

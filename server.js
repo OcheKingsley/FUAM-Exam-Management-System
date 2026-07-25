@@ -339,22 +339,15 @@ app.get(
         q.question,
         sa.selected_answer,
         q.correctAnswer
-
       FROM student_answers sa
-
-      JOIN exam e
-      ON sa.exam_id = e.id
-
-      JOIN questions q
-      ON sa.question_id = q.id
-
-      ORDER BY sa.id DESC
+      LEFT JOIN exam e ON sa.exam_id = e.id
+      LEFT JOIN questions q ON sa.question_id = q.id
+      ORDER BY sa.student_id DESC, sa.question_id DESC
       `,
       (err, results) => {
 
         if (err) {
           console.error(err);
-
           return res.status(500).json({
             message: "Database error"
           });
