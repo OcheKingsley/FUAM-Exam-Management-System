@@ -333,10 +333,10 @@ app.get(
       `
       SELECT
         sa.student_id,
+        sa.exam_id,
         e.courseCode,
         e.courseTitle,
         sa.question_id,
-        q.question,
         sa.selected_answer,
         q.correctAnswer
       FROM student_answers sa

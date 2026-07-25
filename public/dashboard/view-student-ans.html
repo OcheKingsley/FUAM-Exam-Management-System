@@ -22,7 +22,7 @@ h2 { margin-bottom:16px; font-size:1.6rem; }
 .search-bar button:hover { background:var(--primary-dark); }
 .search-bar button.secondary:hover { background:#d1d5db; }
 .table-wrapper { overflow-x:auto; }
-table { width:100%; border-collapse:collapse; min-width:800px; }
+table { width:100%; border-collapse:collapse; min-width:900px; }
 thead { background:var(--primary); color:white; }
 th, td { padding:12px 14px; text-align:left; border-bottom:1px solid var(--border); font-size:0.9rem; }
 tbody tr:hover { background:#f1f5ff; }
@@ -36,7 +36,7 @@ td { color:var(--text); }
   <h2>📝 Student Answers</h2>
   <div class="card">
     <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Search by Student ID or Course Title">
+      <input type="text" id="searchInput" placeholder="Search by Student ID, Exam ID, Course Code or Title">
       <button onclick="searchAnswers()">Search</button>
       <button class="secondary" onclick="loadAllAnswers()">Show All</button>
     </div>
@@ -45,6 +45,7 @@ td { color:var(--text); }
         <thead>
           <tr>
             <th>Student ID</th>
+            <th>Exam ID</th>
             <th>Course Code</th>
             <th>Course Title</th>
             <th>Question ID</th>
@@ -52,42 +53,32 @@ td { color:var(--text); }
           </tr>
         </thead>
         <tbody id="answersBody">
-          <tr><td colspan="5" class="empty">Loading...</td></tr>
+          <tr><td colspan="6" class="empty">Loading...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
+
 <script>
 const token = localStorage.getItem('token');
 let answersData = [];
 
-// Fetch all student answers
 function loadAllAnswers() {
   const body = document.getElementById('answersBody');
-  body.innerHTML = `<tr><td colspan="5" class="empty">Loading...</td></tr>`;
+  body.innerHTML = `<tr><td colspan="6" class="empty">Loading...</td></tr>`;
 
   fetch('/api/student-answers', { headers:{ Authorization: 'Bearer ' + token } })
     .then(async res => {
       const data = await res.json();
-      
-      // Handle API errors (403, 500, etc.)
-      if (!res.ok) {
-        throw new Error(data.message || `Server error: ${res.status}`);
-      }
-      
-      // Handle non-array responses
-      if (!Array.isArray(data)) {
-        console.error('Unexpected API response:', data);
-        throw new Error('Invalid data format received from server');
-      }
-      
+      if (!res.ok) throw new Error(data.message || `Server error: ${res.status}`);
+      if (!Array.isArray(data)) throw new Error('Invalid data format from server');
       return data;
     })
     .then(data => {
-      // Handle null/undefined values gracefully
       answersData = data.map(a => ({
         student_id: a.student_id || 'N/A',
+        exam_id: a.exam_id ?? 'N/A',
         courseCode: a.courseCode || 'N/A',
         courseTitle: a.courseTitle || 'N/A',
         question_id: a.question_id || 'N/A',
@@ -98,11 +89,10 @@ function loadAllAnswers() {
     .catch(err => {
       console.error(err);
       document.getElementById('answersBody').innerHTML = 
-        `<tr><td colspan="5" class="empty" style="color:#dc2626;">Error: ${err.message}</td></tr>`;
+        `<tr><td colspan="6" class="empty" style="color:#dc2626;">Error: ${err.message}</td></tr>`;
     });
 }
 
-// Search function
 function searchAnswers() {
   const val = document.getElementById('searchInput').value.toLowerCase().trim();
   if (!val) {
@@ -111,22 +101,23 @@ function searchAnswers() {
   }
   const filtered = answersData.filter(a => 
     (a.student_id || '').toLowerCase().includes(val) || 
-    (a.courseTitle || '').toLowerCase().includes(val) ||
-    (a.courseCode || '').toLowerCase().includes(val)
+    String(a.exam_id).includes(val) ||
+    (a.courseCode || '').toLowerCase().includes(val) ||
+    (a.courseTitle || '').toLowerCase().includes(val)
   );
   renderAnswers(filtered);
 }
 
-// Render table
 function renderAnswers(data){
   const body = document.getElementById('answersBody');
   if(data.length === 0){
-    body.innerHTML = `<tr><td colspan="5" class="empty">No answers found</td></tr>`;
+    body.innerHTML = `<tr><td colspan="6" class="empty">No answers found</td></tr>`;
     return;
   }
 
   body.innerHTML = data.map(a => `<tr>
     <td>${escapeHtml(a.student_id)}</td>
+    <td>${escapeHtml(a.exam_id)}</td>
     <td>${escapeHtml(a.courseCode)}</td>
     <td>${escapeHtml(a.courseTitle)}</td>
     <td>${escapeHtml(a.question_id)}</td>
@@ -134,7 +125,6 @@ function renderAnswers(data){
   </tr>`).join('');
 }
 
-// Prevent XSS
 function escapeHtml(text) {
   if (text === null || text === undefined) return '';
   const div = document.createElement('div');
@@ -142,12 +132,10 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Allow "Enter" key to trigger search
 document.getElementById('searchInput').addEventListener('keypress', function(e) {
   if (e.key === 'Enter') searchAnswers();
 });
 
-// Initial load
 loadAllAnswers();
 </script>
 </body>
