@@ -1166,13 +1166,64 @@ app.put('/api/user/:userId', authenticateToken, authorizeRoles('admin'), (req, r
   const userId = req.params.userId;
   const { fullName, email, department, level } = req.body;
 
+  // Validate required fields
+  if (!fullName || !email) {
+    return res.status(400).json({ message: 'Full name and email are required' });
+  }
+
+  // Check if user exists
   db.query(
-    'UPDATE registrations SET fullName = ?, email = ?, department = ?, level = ? WHERE roleSpecificField = ?',
-    [fullName, email, department || null, level || null, userId],
-    (err, result) => {
-      if (err) return res.status(500).json({ message: 'Database error' });
-      if (result.affectedRows === 0) return res.status(404).json({ message: 'User not found' });
-      res.json({ message: 'User updated successfully' });
+    'SELECT id, email FROM registrations WHERE roleSpecificField = ?',
+    [userId],
+    (err, users) => {
+      if (err) {
+        console.error('Find user error:', err);
+        return res.status(500).json({ message: 'Database error' });
+      }
+
+      if (users.length === 0) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Check for email conflict (if changing email)
+      if (email !== users[0].email) {
+        db.query(
+          'SELECT id FROM registrations WHERE email = ? AND roleSpecificField != ?',
+          [email, userId],
+          (err2, existing) => {
+            if (err2) {
+              console.error('Email check error:', err2);
+              return res.status(500).json({ message: 'Database error' });
+            }
+            if (existing.length > 0) {
+              return res.status(409).json({ message: 'Email already in use by another user' });
+            }
+            doUpdate();
+          }
+        );
+      } else {
+        doUpdate();
+      }
+
+      function doUpdate() {
+        const dept = department && department.trim() !== '' ? department.trim() : null;
+        const lvl = level && level.trim() !== '' ? level.trim() : null;
+
+        db.query(
+          'UPDATE registrations SET fullName = ?, email = ?, department = ?, level = ? WHERE roleSpecificField = ?',
+          [fullName.trim(), email.trim(), dept, lvl, userId],
+          (err3, result) => {
+            if (err3) {
+              console.error('Update error:', err3);
+              return res.status(500).json({ message: 'Database error', error: err3.message });
+            }
+            if (result.affectedRows === 0) {
+              return res.status(404).json({ message: 'User not found' });
+            }
+            res.json({ message: 'User updated successfully' });
+          }
+        );
+      }
     }
   );
 });
