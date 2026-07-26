@@ -22,13 +22,16 @@ function fetchExamData(examId) {
     fetch(`/api/quiz/${examId}`, {
         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
     })
-    .then(res => {
-        if (res.status === 403) throw new Error("EXAM_TAKEN");
-        if (!res.ok) throw new Error("Failed to fetch exam data");
+    .then(async res => {
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            const err = new Error(data.message || "Failed to fetch exam data");
+            err.status = res.status;
+            throw err;
+        }
         return res.json();
     })
     .then(data => {
-        // Set global variables
         allQuestions = data.questions;
         allocatedTime = data.exam.allocatedTime;
 
@@ -40,18 +43,17 @@ function fetchExamData(examId) {
             document.getElementById('question-container').innerHTML = 'No questions found.';
         }
 
-        startTimer(); // Pass allocatedTime
+        startTimer();
     })
     .catch(err => {
-        if (err.message === "EXAM_TAKEN") {
-            document.body.innerHTML = `
-                <h2 style="text-align:center;margin-top:50px;">
-                    ❌ You have already taken this exam
-                </h2>
-            `;
-        } else {
-            console.error(err);
-        }
+        console.error(err);
+        const msg = err.message || "An error occurred";
+        document.body.innerHTML = `
+            <div style="text-align:center;margin-top:50px;padding:20px;">
+                <h2>❌ ${msg}</h2>
+                <a href="/student-dashboard" style="color:#2563eb;">← Back to Dashboard</a>
+            </div>
+        `;
     });
 }
 
