@@ -250,7 +250,7 @@ app.get(
 
   }
 );
- 
+
 // admin exam view 
 app.get(
     '/api/exam-courseTitle',
@@ -532,13 +532,16 @@ app.post('/register', authenticateToken, authorizeRoles('admin'), (req, res) => 
   });
 });
 
-// post for assigning exam 
+// post for assigning exam // Helper: convert WAT (UTC+1) to UTC for storage
+function watToUtc(datetimeStr) {
+  const d = new Date(datetimeStr); // Browser sends local time, Node sees it as UTC
+  return new Date(d.getTime() - 60 * 60 * 1000); // Subtract 1 hour
+}
+
 app.post("/assignExam", authenticateToken, (req, res) => {
 
     if (req.user.role !== "admin") {
-        return res.status(403).json({
-            message: "Access denied"
-        });
+        return res.status(403).json({ message: "Access denied" });
     }
 
     const {
@@ -552,66 +555,35 @@ app.post("/assignExam", authenticateToken, (req, res) => {
         endTime
     } = req.body;
 
-    if (
-        !courseTitle ||
-        !courseCode ||
-        !eligibleDepartment ||
-        !eligibleLevel ||
-        !unitAllocated ||
-        !allocatedTime ||
-        !examTime ||
-        !endTime
-    ) {
-        return res.status(400).json({
-            message: "All fields are required."
-        });
+    if (!courseTitle || !courseCode || !eligibleDepartment || !eligibleLevel || !unitAllocated || !allocatedTime || !examTime || !endTime) {
+        return res.status(400).json({ message: "All fields are required." });
     }
 
+    // Convert WAT to UTC before storing
+    const examTimeUtc = watToUtc(examTime).toISOString().slice(0, 19).replace('T', ' ');
+    const endTimeUtc = watToUtc(endTime).toISOString().slice(0, 19).replace('T', ' ');
+
     const sql = `
-        INSERT INTO exam
-        (
-            courseTitle,
-            courseCode,
-            eligibleDepartment,
-            eligibleLevel,
-            unitAllocated,
-            allocatedTime,
-            examTime,
-            endTime
-        )
+        INSERT INTO exam (courseTitle, courseCode, eligibleDepartment, eligibleLevel, unitAllocated, allocatedTime, examTime, endTime)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    db.query(
-        sql,
-        [
-            courseTitle,
-            courseCode,
-            eligibleDepartment,
-            eligibleLevel,
-            unitAllocated,
-            allocatedTime,
-            examTime,
-            endTime
-        ],
-        (err, result) => {
-
-            if (err) {
-                console.error(err);
-                return res.status(500).json({
-                    message: "Database error"
-                });
-            }
-
-            res.json({
-                success: true,
-                message: "Exam assigned successfully.",
-                examId: result.insertId
-            });
-
+    db.query(sql, [
+        courseTitle,
+        courseCode,
+        eligibleDepartment,
+        eligibleLevel,
+        unitAllocated,
+        allocatedTime,
+        examTimeUtc,
+        endTimeUtc
+    ], (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ message: "Database error" });
         }
-    );
-
+        res.json({ success: true, message: "Exam assigned successfully.", examId: result.insertId });
+    });
 });
 
 // for submiting question 
