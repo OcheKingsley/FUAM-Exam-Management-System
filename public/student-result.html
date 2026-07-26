@@ -221,10 +221,13 @@ fetch("/api/student/results", {
     }
 
     let totalWeighted = 0;
+    let totalUnits = 0;
 
     results.forEach(r => {
 
+        const units = Number(r.unitAllocated) || 0;
         totalWeighted += Number(r.weighted_score);
+        totalUnits += units;
 
         tbody.innerHTML += `
         <tr>
@@ -237,7 +240,7 @@ fetch("/api/student/results", {
         </tr>`;
     });
 
-    const cgpa = totalWeighted / results.length;
+    const cgpa = totalUnits > 0 ? (totalWeighted / totalUnits) : 0;
 
     document.getElementById("cgpa").innerText = cgpa.toFixed(2);
 

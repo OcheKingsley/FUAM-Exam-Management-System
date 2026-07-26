@@ -222,15 +222,18 @@ app.get(
 
     db.query(
       `SELECT
-          courseCode,
-          courseTitle,
-          score,
-          total_questions,
-          percentage,
-          weighted_score,
-          submitted_at
-       FROM exam_results
-       WHERE student_id = ?`,
+          er.courseCode,
+          er.courseTitle,
+          er.score,
+          er.total_questions,
+          er.percentage,
+          er.weighted_score,
+          e.unitAllocated,
+          er.submitted_at
+       FROM exam_results er
+       LEFT JOIN exam e ON er.exam_id = e.id
+       WHERE er.student_id = ?
+       ORDER BY er.submitted_at DESC`,
       [req.user.userId],
       (err, results) => {
 
@@ -247,7 +250,6 @@ app.get(
 
   }
 );
-
  
 // admin exam view 
 app.get(
