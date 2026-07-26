@@ -228,7 +228,7 @@ app.get(
           er.total_questions,
           er.percentage,
           er.weighted_score,
-          e.unitAllocated,
+          COALESCE(er.unitAllocated, e.unitAllocated) AS unitAllocated,
           er.submitted_at
        FROM exam_results er
        LEFT JOIN exam e ON er.exam_id = e.id
@@ -912,10 +912,8 @@ app.post(
 
 
 
-
-                // Function to save result
+                                // Function to save result
                 function saveExamResult(){
-
 
                   db.query(
                     `
@@ -928,9 +926,10 @@ app.post(
                       score,
                       total_questions,
                       percentage,
-                      weighted_score
+                      weighted_score,
+                      unitAllocated
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `,
 
                     [
@@ -941,7 +940,8 @@ app.post(
                       score,
                       total_questions,
                       percentage,
-                      weighted_score
+                      weighted_score,
+                      unitAllocated
                     ],
 
 
