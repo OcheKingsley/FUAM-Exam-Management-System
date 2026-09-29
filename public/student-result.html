@@ -129,6 +129,7 @@
     }
   }
 </style>
+<base target="_blank">
 </head>
 
 <body>
@@ -136,8 +137,16 @@
 
   <div class="header">
     <h2>📊 My Exam Results</h2>
-    <div class="cgpa-box">
-      Total CGPA: <span id="cgpa">0.00</span>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="cgpa-box">
+        Total Points: <span id="totalPoints">0.00</span>
+      </div>
+      <div class="cgpa-box">
+        Total Units: <span id="totalUnits">0</span>
+      </div>
+      <div class="cgpa-box">
+        CGPA: <span id="cgpa">0.00</span>
+      </div>
     </div>
   </div>
 
@@ -215,19 +224,34 @@ fetch("/api/student/results", {
             <td colspan="6">No results available.</td>
         </tr>`;
 
+        document.getElementById("totalPoints").innerText = "0.00";
+        document.getElementById("totalUnits").innerText = "0";
         document.getElementById("cgpa").innerText = "0.00";
         btn.disabled = true;
         return;
     }
 
-    let totalWeighted = 0;
-    let totalUnits = 0;
+    let totalPoints = 0;   // sum of (percentage × units) = student's total points
+    let totalUnits  = 0;
 
     results.forEach(r => {
 
-        const units = Number(r.unitAllocated) || 0;
-        totalWeighted += Number(r.weighted_score);
-        totalUnits += units;
+        const units  = Number(r.unitAllocated) || 0;
+        const score  = Number(r.score) || 0;
+        const totalQ = Number(r.total_questions) || 0;
+
+        // Percentage: what the student scored, scaled to 100
+        const percentage = totalQ > 0 ? (score / totalQ) * 100 : 0;
+
+        // Weighted: percentage multiplied by the course units
+        const weighted = percentage * units;
+
+        // Save back so the PDF uses these same computed values
+        r.percentage = percentage;
+        r.weighted_score = weighted;
+
+        totalPoints += weighted;
+        totalUnits  += units;
 
         tbody.innerHTML += `
         <tr>
@@ -235,19 +259,22 @@ fetch("/api/student/results", {
             <td>${r.courseTitle}</td>
             <td>${r.score}</td>
             <td>${r.total_questions}</td>
-            <td>${Number(r.percentage).toFixed(2)}%</td>
-            <td>${Number(r.weighted_score).toFixed(2)}</td>
+            <td>${percentage.toFixed(2)}%</td>
+            <td>${weighted.toFixed(2)}</td>
         </tr>`;
     });
 
-    const cgpa = totalUnits > 0 ? (totalWeighted / totalUnits) : 0;
+    // CGPA = total points ÷ total units
+    const cgpa = totalUnits > 0 ? (totalPoints / totalUnits) : 0;
 
-    document.getElementById("cgpa").innerText = cgpa.toFixed(2);
+    document.getElementById("totalPoints").innerText = totalPoints.toFixed(2);
+    document.getElementById("totalUnits").innerText  = totalUnits;
+    document.getElementById("cgpa").innerText        = cgpa.toFixed(2);
 
     btn.disabled = false;
 
 })
-.catch(err => {
+.catch(err => {          
 
     console.error(err);
 
@@ -296,6 +323,8 @@ btn.addEventListener("click", () => {
     pdf.text(`Level: ${studentInfo.level || ""}`, 14, 59);
 
     pdf.text(`CGPA: ${document.getElementById("cgpa").innerText}`, 150, 35);
+    pdf.text(`Total Points: ${document.getElementById("totalPoints").innerText}`, 150, 43);
+    pdf.text(`Total Units: ${document.getElementById("totalUnits").innerText}`, 150, 51);
 
     let y = 75;
 
